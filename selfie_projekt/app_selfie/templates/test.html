@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h1>Email Küldés Teszt</h1>
+    
+    <button onclick="tesztKuldes()">TESZT KÜLDÉS</button>
+    
+    <div id="eredmeny" style="margin-top: 20px; padding: 10px; background: #f0f0f0;"></div>
+    
+    <script>
+    function tesztKuldes() {
+        const eredmenyDiv = document.getElementById('eredmeny');
+        eredmenyDiv.innerHTML = "Küldés...";
+        
+        fetch('/kuldes/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                email: 'petivadasz06@gmail.com',
+                kep: 'data:image/jpeg;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+            })
+        })
+        .then(v => v.json())
+        .then(eredmeny => {
+            eredmenyDiv.innerHTML = "✅ Sikeres!<br>" + JSON.stringify(eredmeny);
+        })
+        .catch(hiba => {
+            eredmenyDiv.innerHTML = "❌ Hiba:<br>" + hiba;
+        });
+    }
+    </script>
+</body>
+</html>

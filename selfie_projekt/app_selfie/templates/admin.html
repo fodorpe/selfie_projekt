@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Email Beállítás</title>
+</head>
+<body>
+    <h1>Admin Oldal</h1>
+    <h2>Email cím beállítása</h2>
+    
+    <div>
+        <label for="email">Email cím:</label>
+        <br>
+        <input type="email" id="email" placeholder="pelda@email.com">
+    </div>
+    
+    <br>
+    
+    <button onclick="saveEmail()">Email mentése</button>
+    <button onclick="deleteEmail()">Email törlése</button>
+    
+    <br><br>
+    
+    <div id="message"></div>
+    
+    <br><br>
+    
+    <div>
+        <h3>Jelenleg mentett email:</h3>
+        <div id="savedEmail">Nincs mentett email</div>
+    </div>
+
+    <script>
+        // Betöltjük a mentett emailt az oldal megnyitásakor
+        window.onload = function() {
+            loadSavedEmail();
+        };
+
+        function saveEmail() {
+            const email = document.getElementById('email').value;
+            const message = document.getElementById('message');
+            
+            if (email === '') {
+                message.innerHTML = 'Kérjük, adj meg egy email címet!';
+                return;
+            }
+            
+            // Ellenőrizzük az email formátumot
+            if (!isValidEmail(email)) {
+                message.innerHTML = 'Kérjük, adj meg egy érvényes email címet!';
+                return;
+            }
+            
+            // Elmentjük a localStorage-ba
+            localStorage.setItem('cameraEmail', email);
+            message.innerHTML = 'Email cím sikeresen mentve!';
+            
+            // Frissítjük a megjelenített emailt
+            loadSavedEmail();
+            
+            // Ürítjük az input mezőt
+            document.getElementById('email').value = '';
+        }
+
+        function deleteEmail() {
+            // Töröljük az emailt a localStorage-ból
+            localStorage.removeItem('cameraEmail');
+            
+            // Frissítjük az üzenetet
+            document.getElementById('message').innerHTML = 'Email cím törölve!';
+            
+            // Frissítjük a megjelenített emailt
+            loadSavedEmail();
+        }
+
+        function loadSavedEmail() {
+            const savedEmail = localStorage.getItem('cameraEmail');
+            const savedEmailElement = document.getElementById('savedEmail');
+            
+            if (savedEmail) {
+                savedEmailElement.innerHTML = savedEmail;
+            } else {
+                savedEmailElement.innerHTML = 'Nincs mentett email';
+            }
+        }
+
+        function isValidEmail(email) {
+            // Egyszerű email validáció
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+    </script>
+</body>
+</html>

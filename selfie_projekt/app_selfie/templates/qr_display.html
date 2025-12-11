@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>SelfieBox - QR Kód</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial;
+            padding: 50px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 30px;
+            background: #f5f5f5;
+            border-radius: 15px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .qr-container {
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            display: inline-block;
+            margin: 20px 0;
+        }
+        
+        .instructions {
+            text-align: left;
+            background: #e8f4fc;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+        }
+        
+        .step {
+            margin-bottom: 15px;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .step-number {
+            position: absolute;
+            left: 0;
+            background: #2196F3;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 25px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 SelfieBox QR Kód</h1>
+        
+        <p>Skenneld be ezt a QR kódot a telefonoddal:</p>
+        
+        <div class="qr-container">
+            <img src="/qr-code/" alt="QR Code" width="300" height="300">
+        </div>
+        
+        <p><strong>URL:</strong> http://127.0.0.1:8000/</p>
+        
+        <div class="instructions">
+            <h3>📋 Használati útmutató:</h3>
+            
+            <div class="step">
+                <div class="step-number">1</div>
+                <strong>Nyiss QR kód olvasó appot</strong><br>
+                (Telefon kamera vagy speciális app)
+            </div>
+            
+            <div class="step">
+                <div class="step-number">2</div>
+                <strong>Skenneld be a QR kódot</strong><br>
+                Tartsd a kamerát a képernyőhöz közel
+            </div>
+            
+            <div class="step">
+                <div class="step-number">3</div>
+                <strong>Kattints a linkre</strong><br>
+                A telefonod megnyitja a SelfieBox oldalt
+            </div>
+            
+            <div class="step">
+                <div class="step-number">4</div>
+                <strong>Add meg az email címed</strong><br>
+                És készíts egy képet!
+            </div>
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <a href="/">⬅️ Vissza a főoldalra</a> | 
+            <a href="/selfie/?email=teszt@example.com">📸 Kamera teszt</a>
+        </div>
+    </div>
+</body>
+</html>

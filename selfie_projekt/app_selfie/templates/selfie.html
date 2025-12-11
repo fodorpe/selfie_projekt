@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <title>Kamera és Visszaszámláló</title>
+    <style>
+        body {
+            text-align: center;
+        }
+        
+        .media-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            margin: 20px auto;
+            max-width: 400px;
+        }
+        
+        .camera-section, .photo-section {
+            width: 100%;
+        }
+        
+        video, canvas {
+            width: 100%;
+            height: 300px;
+            background-color: #333;
+        }
+        
+        canvas {
+            border: 1px solid black;
+            background-color: #f0f0f0;
+        }
+        
+        h3 {
+            margin-bottom: 10px;
+        }
+        
+        #countdown {
+            font-size: 24px;
+            margin: 10px;
+            height: 30px;
+        }
+        
+        #takePhotoBtn, #sendPhotoBtn {
+            margin: 10px 0;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        
+        #sendPhotoBtn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+        }
+        
+        #sendPhotoBtn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        #sendPhotoBtn.sent {
+            background-color: #2196F3;
+        }
+        
+        .email-display {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f0f8ff;
+            border-radius: 5px;
+            border: 1px solid #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <!-- EMAIL CÍM MEGJELENÍTÉSE -->
+    <div class="email-display">
+        Email cím: <strong>{{ email }}</strong>
+    </div>
+    
+    <h1>Fotózkodás</h1>
+    
+    <button onclick="bekapcsolKamera()">Kamera indítása</button>
+    
+    <div class="media-container">
+        <!-- Kamera -->
+        <div class="camera-section">
+            <h3>Kamera</h3>
+            <video id="video"></video>
+        </div>
+        
+        <!-- Visszaszámlálás és gomb -->
+        <div id="countdown"></div>
+        <button id="takePhotoBtn" onclick="startCountdown()">Kép készítése</button>
+        
+        <!-- Készült kép -->
+        <div class="photo-section">
+            <h3>Készült kép</h3>
+            <canvas id="canvas"></canvas>
+        </div>
+        
+        <!-- Kép küldése gomb -->
+        <button id="sendPhotoBtn" onclick="sendPhoto()" disabled>Kép küldése</button>
+    </div>
+
+    <script>
+        let currentPhotoData = null;
+        
+        function bekapcsolKamera() {
+            const video = document.getElementById('video');
+            const takePhotoBtn = document.getElementById('takePhotoBtn');
+            
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(function(stream) {
+                        video.srcObject = stream;
+                        video.play();
+                        takePhotoBtn.disabled = false;
+                    })
+                    .catch(function(error) {
+                        alert("Hiba: " + error.message);
+                    });
+            } else {
+                alert("A böngésző nem támogatja a kamerát");
+            }
+        }
+
+        function startCountdown() {
+            let count = 5;
+            const countdownElement = document.getElementById('countdown');
+            const takePhotoBtn = document.getElementById('takePhotoBtn');
+            const sendPhotoBtn = document.getElementById('sendPhotoBtn');
+            
+            takePhotoBtn.disabled = true;
+            sendPhotoBtn.textContent = "Kép küldése";
+            sendPhotoBtn.className = "";
+            sendPhotoBtn.disabled = true;
+            countdownElement.textContent = count;
+            
+            const timer = setInterval(function() {
+                count--;
+                countdownElement.textContent = count;
+                
+                if (count <= 0) {
+                    clearInterval(timer);
+                    countdownElement.textContent = "Visszaszámlálás vége!";
+                    // Kép készítése
+                    takePicture();
+                    takePhotoBtn.disabled = false;
+                }
+            }, 1000);
+        }
+
+        function takePicture() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+            const sendPhotoBtn = document.getElementById('sendPhotoBtn');
+            
+            // Kép méreteinek beállítása
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            // Kép készítése a videóról
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Kép adatainak elmentése
+            currentPhotoData = canvas.toDataURL('image/jpeg', 0.8);
+            
+            // Kép küldése gomb engedélyezése
+            sendPhotoBtn.disabled = false;
+            sendPhotoBtn.textContent = "Kép küldése";
+            sendPhotoBtn.className = "";
+            
+            alert("Kép készült! Most elküldheted.");
+        }
+        
+        function sendPhoto() {
+            const gomb = document.getElementById('sendPhotoBtn');
+            const email = "{{ email }}";
+    
+            if (!currentPhotoData) {
+                alert("Nincs kép!");
+                return;
+            }
+    
+            // Gomb letilt
+            gomb.disabled = true;
+            gomb.textContent = "Küldés...";
+    
+            // Küldés a szervernek
+            fetch('/kuldes/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: email,
+                    kep: currentPhotoData
+                })
+            })
+            .then(v => v.json())
+            .then(eredmeny => {
+                if (eredmeny.siker) {
+                    gomb.textContent = "Elküldve";
+                    gomb.className = "sent";
+                    alert("✅ Kép elküldve!");
+                } else {
+                    gomb.textContent = "Kép küldése";
+                    gomb.disabled = false;
+                    alert("❌ Hiba: " + eredmeny.uzenet);
+                }
+            })
+            .catch(hiba => {
+                gomb.textContent = "Kép küldése";
+                gomb.disabled = false;
+                alert("❌ Hálózati hiba");
+            });
+        }
+        
+        // Gombok kezdetben letiltva
+        document.getElementById('takePhotoBtn').disabled = true;
+        document.getElementById('sendPhotoBtn').disabled = true;
+    </script>
+</body>
+</html>

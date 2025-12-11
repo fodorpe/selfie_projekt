@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>SelfieBox - Email cím</title>
+    <style>
+        body {
+            margin: 0;
+            padding-top: 100px;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 40px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .input-group {
+            margin-bottom: 25px;
+            text-align: left;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        input[type="email"] {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+        
+        input[type="email"]:focus {
+            border-color: #2196F3;
+            outline: none;
+        }
+        
+        .camera-options {
+            margin: 30px 0;
+            text-align: left;
+        }
+        
+        .camera-option {
+            margin-bottom: 15px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .camera-option:hover {
+            border-color: #2196F3;
+            background-color: #f0f8ff;
+        }
+        
+        .camera-option.selected {
+            border-color: #4CAF50;
+            background-color: #e8f5e9;
+        }
+        
+        .camera-option h3 {
+            margin: 0 0 5px 0;
+            color: #333;
+        }
+        
+        .camera-option p {
+            margin: 0;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .option-icon {
+            font-size: 24px;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        
+        button[type="submit"] {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        button[type="submit"]:hover {
+            background-color: #0b7dda;
+        }
+        
+        button[type="submit"]:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .error-message {
+            color: #f44336;
+            margin-top: 10px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .qr-link {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .qr-link a {
+            color: #2196F3;
+            text-decoration: none;
+        }
+        
+        .qr-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📸 SelfieBox</h1>
+        <p class="subtitle">Add meg az email címed, és válaszd ki a kamerát!</p>
+        
+        <form id="emailForm">
+            <div class="input-group">
+                <label for="email">Email cím:</label>
+                <input type="email" id="email" name="email" 
+                       placeholder="pelda@email.com" 
+                       required>
+                <div id="emailError" class="error-message">
+                    Kérjük, adj meg egy érvényes email címet!
+                </div>
+            </div>
+            
+            <div class="camera-options">
+                <h3>Válassz kamerát:</h3>
+                
+                <div class="camera-option" onclick="selectCamera('laptop')" id="laptopOption">
+                    <h3>
+                        <span class="option-icon">💻</span>
+                        Laptop kamera
+                    </h3>
+                    <p>Használd a laptop beépített kameráját (teszteléshez)</p>
+                </div>
+                
+                <div class="camera-option" onclick="selectCamera('raspberry')" id="raspberryOption">
+                    <h3>
+                        <span class="option-icon">🖥️</span>
+                        Raspberry Pi kamera
+                    </h3>
+                    <p>Használd a Raspberry Pi kamerát (telepen használat)</p>
+                </div>
+            </div>
+            
+            <button type="submit" id="submitBtn" disabled>Tovább a kamera oldalra</button>
+            
+            <div class="qr-link">
+                <p>Vagy olvasd be a QR kódot: <a href="/qr/">QR kód megtekintése</a></p>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let selectedCamera = null;
+        
+        function selectCamera(cameraType) {
+            selectedCamera = cameraType;
+            
+            // CSS stílus frissítése
+            document.getElementById('laptopOption').classList.remove('selected');
+            document.getElementById('raspberryOption').classList.remove('selected');
+            
+            if (cameraType === 'laptop') {
+                document.getElementById('laptopOption').classList.add('selected');
+            } else if (cameraType === 'raspberry') {
+                document.getElementById('raspberryOption').classList.add('selected');
+            }
+            
+            // Ellenőrizzük, hogy minden kitöltve van-e
+            checkForm();
+        }
+        
+        function checkForm() {
+            const email = document.getElementById('email').value;
+            const submitBtn = document.getElementById('submitBtn');
+            const emailError = document.getElementById('emailError');
+            
+            // Email validáció
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const isValidEmail = emailRegex.test(email);
+            
+            if (!isValidEmail && email.length > 0) {
+                emailError.style.display = 'block';
+                submitBtn.disabled = true;
+                return;
+            } else {
+                emailError.style.display = 'none';
+            }
+            
+            // Ha minden OK, engedélyezzük a gombot
+            if (email && isValidEmail && selectedCamera) {
+                submitBtn.disabled = false;
+            } else {
+                submitBtn.disabled = true;
+            }
+        }
+        
+        // Form elküldése
+        document.getElementById('emailForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            let redirectUrl = '';
+            
+            // Kiválasztott kamera alapján átirányítás
+            if (selectedCamera === 'laptop') {
+                redirectUrl = `/selfie/?email=${encodeURIComponent(email)}`;
+            } else if (selectedCamera === 'raspberry') {
+                redirectUrl = `/raspberry/?email=${encodeURIComponent(email)}`;
+            }
+            
+            // Átirányítás
+            window.location.href = redirectUrl;
+        });
+        
+        // Input mező figyelése
+        document.getElementById('email').addEventListener('input', checkForm);
+        
+        // Alapértelmezett kameraválasztás (opcionális)
+        window.onload = function() {
+            // Ha szeretnéd, beállíthatsz alapértelmezettet
+            // selectCamera('laptop'); // vagy 'raspberry'
+        };
+    </script>
+</body>
+</html>
