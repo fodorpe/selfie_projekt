@@ -140,14 +140,14 @@ def selfie_view(request):
 
 @csrf_exempt
 def email_kuldes(request):
-    """Email küldés - most már admin emaillel is"""
+    """Email küldés - most már admin emaillel is ÉS kép mentéssel"""
     
     try:
         import json, smtplib, base64
         from email.mime.multipart import MIMEMultipart
         from email.mime.text import MIMEText
         from email.mime.image import MIMEImage
-        from .models import AdminSettings, PhotoSession
+        from .models import AdminSettings, PhotoSession, Photo  # Photo importálása
         
         # 1. Adatok kiolvasása
         data = json.loads(request.body)
@@ -155,16 +155,16 @@ def email_kuldes(request):
         kep_data = data.get('kep', '')
         
         print("=" * 50)
-        print("[EMAIL] EMAIL KÜLDÉS - ADMIN COPY")
+        print("EMAIL KÜLDÉS - ADMIN COPY ÉS KÉP MENTÉS")
         print("=" * 50)
         
         # 2. Admin beállítások betöltése
         admin_settings = AdminSettings.load()
         admin_email = admin_settings.admin_email
         
-        print(f"📍 Küldő: selfiebox.proba@gmail.com")
-        print(f"📍 Címzett: {fogado_email}")
-        print(f"📍 Admin másolat: {admin_email}")
+        print(f"Küldő: selfiebox.proba@gmail.com")
+        print(f"Címzett: {fogado_email}")
+        print(f"Admin másolat: {admin_email}")
         
         # 3. PhotoSession létrehozása
         session = PhotoSession.objects.create(
@@ -172,17 +172,41 @@ def email_kuldes(request):
             photo_taken=True
         )
         
-        # 4. Email összeállítása (eredeti címzettnek)
+        # 4. KÉP MENTÉSE AZ ADATBÁZISBA - EZ AZ ÚJ RÉSZ!
+        photo_saved = False
+        if kep_data and kep_data.startswith('data:image'):
+            try:
+                # Photo objektum létrehozása
+                photo = Photo.objects.create(
+                    photo_session=session
+                )
+                
+                # Base64 kép mentése
+                photo_saved = photo.save_base64_image(kep_data, fogado_email)
+                
+                if photo_saved:
+                    print(f"✅ Kép mentve az adatbázisba: Photo ID {photo.id}")
+                else:
+                    print("⚠️ Kép mentése sikertelen")
+                    
+            except Exception as save_error:
+                print(f"⚠️ Hiba a kép mentésekor: {save_error}")
+        
+        # 5. Email összeállítása (eredeti címzettnek)
         msg_to_user = MIMEMultipart()
         msg_to_user['From'] = 'selfiebox.proba@gmail.com'
         msg_to_user['To'] = fogado_email
         msg_to_user['Subject'] = 'SelfieBox Fotó'
         
         # Szövegtörzs
-        body_text = f"Itt a kép a SelfieBox-ból! 🎉\n\nMunkamenet ID: {session.session_id}"
+        body_text = f"""Itt a kép a SelfieBox-ból! 🎉
+
+Munkamenet ID: {session.session_id}
+Időpont: {session.created_at.strftime('%Y.%m.%d %H:%M:%S')}
+"""
         msg_to_user.attach(MIMEText(body_text, 'plain'))
         
-        # 5. Kép csatolása
+        # 6. Kép csatolása
         if kep_data and kep_data.startswith('data:image'):
             kep_resz = kep_data.split(',')[1]
             kep_binary = base64.b64decode(kep_resz)
@@ -190,7 +214,7 @@ def email_kuldes(request):
             msg_to_user.attach(image)
             print(f"✅ Kép csatolva: {len(kep_binary)} byte")
             
-            # 6. Admin email összeállítása (másolat)
+            # 7. Admin email összeállítása (másolat)
             msg_to_admin = MIMEMultipart()
             msg_to_admin['From'] = 'selfiebox.proba@gmail.com'
             msg_to_admin['To'] = admin_email
@@ -202,6 +226,7 @@ def email_kuldes(request):
             Felhasználó: {fogado_email}
             Munkamenet ID: {session.session_id}
             Időpont: {session.created_at}
+            Kép mentve az adatbázisba: {'IGEN' if photo_saved else 'NEM'}
             
             A kép csatolva van.
             """
@@ -215,44 +240,47 @@ def email_kuldes(request):
                 'uzenet': 'Nincs kép adat!'
             })
         
-        # 7. SMTP kapcsolat és küldés
+        # 8. SMTP kapcsolat és küldés
         print("-" * 30)
-        print("🔗 Kapcsolódás...")
+        print("Kapcsolódás...")
         
-        # APP PASSWORD - IDE ÍRD A SAJÁTOD!
+        # APP PASSWORD
         APP_PASSWORD = "xocg izix evbx qrhc"
         
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
         server.login('selfiebox.proba@gmail.com', APP_PASSWORD)
         
-        # 8. Küldés a FELHASZNÁLÓNAK
-        print("📤 Küldés a felhasználónak...")
+        # 9. Küldés a FELHASZNÁLÓNAK
+        print("Küldés a felhasználónak...")
         server.send_message(msg_to_user)
         
-        # 9. Küldés az ADMINNAK (másolat)
-        print("📋 Küldés az adminnak (másolat)...")
+        # 10. Küldés az ADMINNAK (másolat)
+        print("Küldés az adminnak (másolat)...")
         server.send_message(msg_to_admin)
         
         server.quit()
         
-        # 10. Adatbázis frissítése
+        # 11. Adatbázis frissítése
         session.admin_notified = True
         session.save()
         
         print("=" * 50)
-        print("🎉 EMAIL SIKERESEN ELKÜLDVE!")
-        print(f"   ➤ Felhasználó: {fogado_email}")
-        print(f"   ➤ Admin: {admin_email}")
+        print("EMAIL SIKERESEN ELKÜLDVE ÉS KÉP ELMENTVE!")
+        print(f"   Felhasználó: {fogado_email}")
+        print(f"   Admin: {admin_email}")
+        print(f"   Kép mentve: {'IGEN' if photo_saved else 'NEM'}")
         print("=" * 50)
         
         return JsonResponse({
             'siker': True,
-            'uzenet': f'✅ Kép elküldve! Másolat: {admin_email}'
+            'uzenet': f'✅ Kép elküldve! Másolat: {admin_email}',
+            'photo_saved': photo_saved,
+            'session_id': str(session.session_id)
         })
         
     except Exception as error:
-        print(f"❌ HIBA: {type(error).__name__}: {error}")
+        print(f"HIBA: {type(error).__name__}: {error}")
         return JsonResponse({
             'siker': False,
             'uzenet': f'Hiba: {type(error).__name__}'

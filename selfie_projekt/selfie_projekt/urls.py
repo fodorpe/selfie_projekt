@@ -3,6 +3,11 @@ from django.contrib import admin
 from django.urls import path
 from app_selfie import views
 
+from django.conf import settings
+from django.conf.urls.static import static
+
+
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.email_view, name='email_view'),
