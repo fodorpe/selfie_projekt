@@ -21,6 +21,8 @@ urlpatterns = [
     path('qr/', views.qr_display_view, name='qr_display'),
     path('admin2/', views.admin2_view, name='admin2'),
     path('test/', views.test_view, name='test'),
+    path('get-latest-overlay/', views.get_latest_overlay, name='get_latest_overlay'),
+    path('kuldes/', views.kuldes, name='kuldes'),
 
 ]
 

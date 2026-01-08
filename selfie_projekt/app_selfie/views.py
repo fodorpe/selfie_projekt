@@ -6,7 +6,7 @@ import base64
 import qrcode
 from io import BytesIO
 from .send_email import kuldo_email
-from .models import AdminSettings, PhotoSession
+from .models import PhotoSession, Photo, AdminSettings, UploadedImage
 
 
 from PIL import Image
@@ -138,8 +138,163 @@ def selfie_view(request):
             </html>
         """)
     
+    # Legutóbbi aktív overlay kép kiválasztása
+    latest_overlay = None
+    overlay_url = None
+    
+    try:
+        latest_overlay = UploadedImage.objects.filter(
+            is_active=True
+        ).order_by('-upload_date').first()
+        
+        if latest_overlay:
+            overlay_url = latest_overlay.image.url
+            
+            # ÜZENET A KONZOLRA (debug célokra)
+            print(f"[INFO] Legutóbbi overlay: {latest_overlay.id} - {latest_overlay.description}")
+            print(f"[INFO] Overlay URL: {overlay_url}")
+    except Exception as e:
+        print(f"[HIBA] Overlay betöltés: {e}")
+    
+    # Az email cím átadása a template-nek
+    context = {
+        'email': email,
+        'overlay_image': latest_overlay,  # Az egész objektum
+        'overlay_url': overlay_url,       # Vagy csak az URL
+        'has_overlay': latest_overlay is not None
+    }
+    
+    return render(request, 'selfie.html', context)
+
+
+
+
     # Átadjuk az email címet a template-nek
     return render(request, "selfie.html", {'email': email})
+
+
+
+
+
+
+def get_latest_overlay(request):
+    """Visszaadja a legutóbb feltöltött aktív overlay képet"""
+    try:
+        # Csökkenő sorrendben rendezzük, és az elsőt vesszük
+        latest_overlay = UploadedImage.objects.filter(
+            is_active=True
+        ).order_by('-upload_date').first()
+        
+        if not latest_overlay:
+            return JsonResponse({
+                'success': False,
+                'message': 'Nincsenek aktív háttérképek'
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'overlay': {
+                'id': latest_overlay.id,
+                'url': latest_overlay.image.url,
+                'description': latest_overlay.description or "Nincs leírás",
+                'upload_date': latest_overlay.upload_date.strftime('%Y.%m.%d %H:%M'),
+                'is_latest': True
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        })
+
+
+@csrf_exempt
+def kuldes(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            email = data.get('email')
+            kep_data = data.get('kep')
+            
+            if not email or not kep_data:
+                return JsonResponse({'siker': False, 'uzenet': 'Hiányzó adatok'})
+            
+            # 1. PhotoSession létrehozása
+            photo_session = PhotoSession.objects.create(
+                user_email=email,
+                photo_taken=True
+            )
+            
+            # 2. LEGUTÓBBI AKTÍV OVERLAY KÉP KIVÁLASZTÁSA
+            latest_overlay = UploadedImage.objects.filter(
+                is_active=True
+            ).order_by('-upload_date').first()
+            
+            if latest_overlay:
+                photo_session.overlay_image = latest_overlay
+                photo_session.save()  # MENTÉS IDE
+            
+            # 3. Photo létrehozása és mentése
+            photo = Photo.objects.create(
+                photo_session=photo_session,
+                image_base64=kep_data
+            )
+            
+            # Base64 kép fájlba mentése
+            if kep_data.startswith('data:image'):
+                photo.save_base64_image(kep_data, email)
+            
+            # 4. Email küldése
+            siker, uzenet = kuldo_email(email, kep_data)
+            
+            # 5. Admin értesítése
+            try:
+                admin_settings = AdminSettings.load()
+                if admin_settings.admin_email:
+                    kuldo_email(admin_settings.admin_email, kep_data)
+                    photo_session.admin_notified = True
+                    photo_session.save()  # MENTÉS IDE
+            except Exception as admin_error:
+                print(f"Admin értesítés hiba: {admin_error}")
+                # Ne álljon meg a folyamat, csak logold a hibát
+            
+            return JsonResponse({
+                'siker': siker, 
+                'uzenet': uzenet,
+                'session_id': str(photo_session.session_id),
+                'overlay_used': latest_overlay is not None,
+                'overlay_id': latest_overlay.id if latest_overlay else None
+            })
+            
+        except Exception as e:
+            return JsonResponse({'siker': False, 'uzenet': str(e)})
+    
+    return JsonResponse({'siker': False, 'uzenet': 'Csak POST kérések'})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -70,6 +70,39 @@
             border-radius: 5px;
             border: 1px solid #2196F3;
         }
+        
+        .overlay-section, .final-section {
+            width: 100%;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+        }
+
+        #overlayContainer {
+            width: 100%;
+            height: 300px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f0f0;
+        }
+
+        #overlayContainer img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        #finalCanvas {
+            width: 100%;
+            height: 300px;
+            background-color: #f0f0f0;
+            border: 1px solid #333;
+        }
+
     </style>
 </head>
 <body>
@@ -99,6 +132,32 @@
             <canvas id="canvas"></canvas>
         </div>
         
+
+        <!-- Overlay kép megjelenítése -->
+        <div class="overlay-section">
+            <h3>Kiválasztott háttérkép</h3>
+            <div id="overlayContainer">
+                <img id="overlayImage" src="" alt="Háttérkép" style="display: none;">
+                <div id="overlayPlaceholder" style="padding: 20px; color: #666;">
+                    Háttérkép betöltése...
+                </div>
+            </div>
+            <button id="changeOverlayBtn" onclick="loadRandomOverlay()" style="margin-top: 10px;">
+                Másik háttérkép
+            </button>
+        </div>
+
+        <!-- Végeredmény -->
+        <div class="final-section" style="display: none; margin-top: 20px;">
+            <h3>Végeredmény (selfie + háttér)</h3>
+            <canvas id="finalCanvas" width="640" height="480"></canvas>
+        </div>
+
+
+
+
+
+
         <!-- Kép küldése gomb -->
         <button id="sendPhotoBtn" onclick="sendPhoto()" disabled>Kép küldése</button>
     </div>
@@ -221,6 +280,87 @@
         // Gombok kezdetben letiltva
         document.getElementById('takePhotoBtn').disabled = true;
         document.getElementById('sendPhotoBtn').disabled = true;
+
+
+
+        // Overlay kép betöltése oldal betöltésekor
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOverlay();
+        });
+
+        function loadOverlay() {
+            const overlayContainer = document.getElementById('overlayContainer');
+            const overlayImage = document.getElementById('overlayImage');
+            const overlayPlaceholder = document.getElementById('overlayPlaceholder');
+            
+            // 1. Django template-ből származó adat
+            const djangoOverlayUrl = "{{ overlay_url|safe }}";
+            
+            if (djangoOverlayUrl && djangoOverlayUrl !== 'None') {
+                // Ha van Django adat, használjuk
+                overlayImage.src = djangoOverlayUrl;
+                overlayImage.style.display = 'block';
+                if (overlayPlaceholder) overlayPlaceholder.style.display = 'none';
+                console.log("Overlay betöltve Django template-ből:", djangoOverlayUrl);
+                return;
+            }
+            
+            // 2. Ha nincs Django adat, fetcheljük
+            if (overlayPlaceholder) {
+                overlayPlaceholder.innerHTML = "Háttérkép betöltése...";
+            }
+            
+            fetch('/get-latest-overlay/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.overlay && data.overlay.url) {
+                        overlayImage.src = data.overlay.url;
+                        overlayImage.style.display = 'block';
+                        if (overlayPlaceholder) overlayPlaceholder.style.display = 'none';
+                        
+                        // Információ megjelenítése
+                        const infoDiv = document.createElement('div');
+                        infoDiv.innerHTML = `
+                            <div style="text-align: center; margin-top: 10px; font-size: 12px; color: #555;">
+                                <strong>${data.overlay.description || 'Nincs leírás'}</strong><br>
+                                <small>Feltöltve: ${data.overlay.upload_date}</small>
+                            </div>
+                        `;
+                        
+                        // Régi info törlése
+                        const oldInfo = overlayContainer.querySelector('.overlay-info');
+                        if (oldInfo) oldInfo.remove();
+                        
+                        infoDiv.className = 'overlay-info';
+                        overlayContainer.appendChild(infoDiv);
+                        
+                        console.log("Overlay betöltve API-ból:", data.overlay.url);
+                    } else {
+                        if (overlayPlaceholder) {
+                            overlayPlaceholder.innerHTML = `
+                                <div style="color: #f44336; padding: 20px; text-align: center;">
+                                    ❌ ${data.message || 'Nincs aktív háttérkép'}<br>
+                                    <small>Az admin oldalon lehet háttérképeket feltölteni.</small>
+                                </div>
+                            `;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error("Hiba a háttérkép betöltésénél:", error);
+                    if (overlayPlaceholder) {
+                        overlayPlaceholder.innerHTML = `
+                            <div style="color: #f44336; padding: 20px; text-align: center;">
+                                ❌ Hálózati hiba<br>
+                                <small>Nem sikerült betölteni a háttérképet.</small>
+                            </div>
+                        `;
+                    }
+                });
+        }
+
+
+
     </script>
 </body>
 </html>
