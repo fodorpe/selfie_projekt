@@ -152,3 +152,35 @@ class UploadedImage(models.Model):
         if self.image and hasattr(self.image, 'width') and hasattr(self.image, 'height'):
             return f"{self.image.width}x{self.image.height}"
         return "Ismeretlen"
+    
+
+
+    def get_full_image_url(self, request=None):
+        """Teljes URL visszaadása a képhez"""
+        if self.image and hasattr(self.image, 'url'):
+            # Relatív útvonal
+            relative_url = self.image.url
+            
+            # Ha van request, akkor teljes URL-t adunk vissza
+            if request:
+                from django.contrib.sites.models import Site
+                from django.http import HttpRequest
+                
+                # Jelenlegi domain
+                current_site = Site.objects.get_current()
+                scheme = 'https' if request.is_secure() else 'http'
+                return f"{scheme}://{current_site.domain}{relative_url}"
+            
+            return relative_url
+        return None
+
+
+
+
+
+
+
+
+
+
+
