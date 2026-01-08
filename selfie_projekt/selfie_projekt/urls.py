@@ -8,6 +8,8 @@ from django.conf.urls.static import static
 
 
 
+
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.email_view, name='email_view'),

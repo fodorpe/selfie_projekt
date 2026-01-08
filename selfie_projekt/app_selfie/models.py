@@ -1,10 +1,10 @@
-# app_selfie/models.py
-from django.db import models
 import uuid
 import os
-
-
-
+from django.db import models
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+import base64
+from datetime import datetime
 
 class AdminSettings(models.Model):
     """
@@ -48,16 +48,6 @@ class PhotoSession(models.Model):
     def __str__(self):
         return f"{self.user_email} - {self.created_at}"
 
-# Photo modellt később adjuk hozzá, ha az AdminSettings működik
-
-
-
-import os
-from django.db import models
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
-import base64
-from datetime import datetime
 
 class Photo(models.Model):
     """
@@ -111,5 +101,54 @@ class Photo(models.Model):
         verbose_name_plural = 'Fotók'
 
 
-
-
+class UploadedImage(models.Model):
+    """
+    Képek feltöltésére és tárolására szolgáló modell
+    """
+    # Kép fájl
+    image = models.ImageField(
+        upload_to='uploaded_images/%Y/%m/%d/',
+        verbose_name='Kép fájl'
+    )
+    
+    # Leírás
+    description = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Leírás',
+        help_text='Opcionális leírás a képhez'
+    )
+    
+    # Aktív-e a kép (használható-e)
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Aktív',
+        help_text='A kép használható-e'
+    )
+    
+    # Feltöltés dátuma (automatikusan)
+    upload_date = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Feltöltés dátuma'
+    )
+    
+    class Meta:
+        verbose_name = 'Feltöltött kép'
+        verbose_name_plural = 'Feltöltött képek'
+        ordering = ['-upload_date']  # Legújabbak előre
+    
+    def __str__(self):
+        return f"Kép #{self.id} - {self.upload_date.strftime('%Y.%m.%d %H:%M')}"
+    
+    def get_image_url(self):
+        """Visszaadja a kép URL-jét"""
+        if self.image and hasattr(self.image, 'url'):
+            return self.image.url
+        return None
+    
+    @property
+    def image_dimensions(self):
+        """Visszaadja a kép méreteit (szélesség x magasság)"""
+        if self.image and hasattr(self.image, 'width') and hasattr(self.image, 'height'):
+            return f"{self.image.width}x{self.image.height}"
+        return "Ismeretlen"
