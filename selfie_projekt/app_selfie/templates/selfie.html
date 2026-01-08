@@ -103,6 +103,72 @@
             border: 1px solid #333;
         }
 
+
+        .final-section {
+            width: 100%;
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 10px;
+            border: 2px solid #4CAF50;
+        }
+
+        #finalCanvas {
+            width: 100%;
+            height: 300px;
+            background-color: white;
+            border: 1px solid #333;
+            border-radius: 5px;
+        }
+
+        #saveFinalBtn {
+            padding: 8px 15px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #saveFinalBtn:hover {
+            background-color: #0b7dda;
+        }
+
+
+
+        #canvas {
+            display: none; /* Elrejtjük az eredeti canvast */
+        }
+        
+        #finalCanvas {
+            width: 100%;
+            height: 400px;
+            background: linear-gradient(45deg, #f5f5f5 25%, transparent 25%), 
+                        linear-gradient(-45deg, #f5f5f5 25%, transparent 25%), 
+                        linear-gradient(45deg, transparent 75%, #f5f5f5 75%), 
+                        linear-gradient(-45deg, transparent 75%, #f5f5f5 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            border: 2px solid #333;
+            border-radius: 10px;
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     </style>
 </head>
 <body>
@@ -150,7 +216,10 @@
         <!-- Végeredmény -->
         <div class="final-section" style="display: none; margin-top: 20px;">
             <h3>Végeredmény (selfie + háttér)</h3>
-            <canvas id="finalCanvas" width="640" height="480"></canvas>
+            <canvas id="finalCanvas"></canvas>
+            <button id="saveFinalBtn" onclick="saveFinalImage()" style="margin-top: 10px; display: none;">
+                💾 Végeredmény mentése
+            </button>
         </div>
 
 
@@ -213,25 +282,33 @@
         function takePicture() {
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
-            const context = canvas.getContext('2d');
             const sendPhotoBtn = document.getElementById('sendPhotoBtn');
             
-            // Kép méreteinek beállítása
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            console.log("=== TAKE PICTURE START ===");
+            
+            // Selfie canvas mérete
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            const ctx = canvas.getContext('2d');
             
             // Kép készítése a videóról
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            // Kép adatainak elmentése
-            currentPhotoData = canvas.toDataURL('image/jpeg', 0.8);
+            console.log("Selfie canvas mérete:", canvas.width, "x", canvas.height);
+            console.log("Selfie készült!");
             
-            // Kép küldése gomb engedélyezése
-            sendPhotoBtn.disabled = false;
-            sendPhotoBtn.textContent = "Kép küldése";
-            sendPhotoBtn.className = "";
+            // Várj egy kicsit, hogy biztosan betöltődjön minden
+            setTimeout(() => {
+                combineImages();
+                
+                // Képküldés gomb engedélyezése
+                sendPhotoBtn.disabled = false;
+                sendPhotoBtn.textContent = "📤 Kép küldése";
+                
+                alert("✅ Kép készült! Nézd meg az összeolvasztott verziót lent!");
+            }, 100);
             
-            alert("Kép készült! Most elküldheted.");
+            console.log("=== TAKE PICTURE END ===\n");
         }
         
         function sendPhoto() {
@@ -358,6 +435,169 @@
                     }
                 });
         }
+
+        function combineImages() {
+            console.log("=== COMBINE IMAGES START ===");
+            
+            const canvas = document.getElementById('canvas');
+            const overlayImg = document.getElementById('overlayImage');
+            const finalCanvas = document.getElementById('finalCanvas');
+            const finalSection = document.querySelector('.final-section');
+            
+            if (!canvas) {
+                console.log("❌ Canvas nem található");
+                return;
+            }
+            
+            console.log("Canvas mérete:", canvas.width, "x", canvas.height);
+            console.log("Overlay kép:", overlayImg ? "találva" : "nem találva");
+            
+            if (overlayImg) {
+                console.log("Overlay src:", overlayImg.src);
+                console.log("Overlay complete:", overlayImg.complete);
+                console.log("Overlay natural size:", overlayImg.naturalWidth, "x", overlayImg.naturalHeight);
+            }
+            
+            // Végeredmény canvas mérete - EGYÉNI MÉRET
+            finalCanvas.width = 640;  // Fix szélesség
+            finalCanvas.height = 480; // Fix magasság
+            const ctx = finalCanvas.getContext('2d');
+            
+            // 1. Először töröljük a canvas-t
+            ctx.clearRect(0, 0, finalCanvas.width, finalCanvas.height);
+            
+            // 2. Háttérkép (overlay) - HA VAN
+            if (overlayImg && overlayImg.src && overlayImg.complete && overlayImg.naturalWidth > 0) {
+                console.log("📷 Háttérkép rajzolása...");
+                
+                // Háttérkép méretezése hogy kitöltse a canvas-t
+                ctx.drawImage(
+                    overlayImg, 
+                    0, 0,                     // forrás pozíció
+                    overlayImg.naturalWidth,  // forrás szélesség
+                    overlayImg.naturalHeight, // forrás magasság
+                    0, 0,                     // cél pozíció
+                    finalCanvas.width,        // cél szélesség
+                    finalCanvas.height        // cél magasság
+                );
+                
+                console.log("✅ Háttérkép rajzolva");
+            } else {
+                console.log("⚠️ Nincs háttérkép vagy nem töltődött be");
+                // Fehér háttér
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+            }
+            
+            // 3. Selfie rárajzolása (középre igazítva)
+            console.log("📸 Selfie rajzolása...");
+            
+            // Selfie méretezése a canvas-re
+            const selfieWidth = finalCanvas.width * 0.8;  // 80%-a a canvas méretének
+            const selfieHeight = finalCanvas.height * 0.8;
+            const selfieX = (finalCanvas.width - selfieWidth) / 2;  // Középre igazítás
+            const selfieY = (finalCanvas.height - selfieHeight) / 2;
+            
+            ctx.drawImage(
+                canvas,
+                0, 0,                    // forrás pozíció
+                canvas.width,            // forrás szélesség
+                canvas.height,           // forrás magasság
+                selfieX, selfieY,        // cél pozíció
+                selfieWidth,             // cél szélesség
+                selfieHeight             // cél magasság
+            );
+            
+            // 4. Keret rajzolása a selfie köré (opcionális)
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(selfieX, selfieY, selfieWidth, selfieHeight);
+            
+            console.log("✅ Selfie rajzolva");
+            console.log("Selfie pozíció:", selfieX, selfieY);
+            console.log("Selfie mérete:", selfieWidth, "x", selfieHeight);
+            
+            // Végeredmény megjelenítése
+            finalSection.style.display = 'block';
+            
+            // Base64 kép a küldéshez
+            currentPhotoData = finalCanvas.toDataURL('image/jpeg', 0.9);
+            
+            console.log("✅ Végeredmény kész!");
+            console.log("=== COMBINE IMAGES END ===\n");
+        }
+
+        // Csak selfie (ha nincs overlay)
+        function fallbackToSelfieOnly(ctx, canvas, finalSection, saveFinalBtn) {
+            ctx.drawImage(canvas, 0, 0);
+            finalSection.style.display = 'block';
+            saveFinalBtn.style.display = 'none';
+            currentPhotoData = canvas.toDataURL('image/jpeg', 0.8);
+            console.log("⚠️ Csak selfie (nincs háttér)");
+        }
+
+        // Végeredmény mentése
+        function saveFinalImage() {
+            if (!currentPhotoData) {
+                alert("Nincs kép!");
+                return;
+            }
+            
+            const finalCanvas = document.getElementById('finalCanvas');
+            const imageData = finalCanvas.toDataURL('image/jpeg', 0.9);
+            
+            // Itt lehetne menteni a szerverre
+            console.log("Végeredmény mentve:", imageData.substring(0, 50) + "...");
+            alert("Végeredmény elkészült!");
+        }
+
+
+
+
+        // Ellenőrizzük az overlay képet oldal betöltésekor
+        window.addEventListener('load', function() {
+            const overlayImg = document.getElementById('overlayImage');
+            
+            if (overlayImg) {
+                console.log("🔍 Overlay kép ellenőrzése...");
+                
+                if (overlayImg.src) {
+                    console.log("📁 Overlay fájl:", overlayImg.src.substring(0, 50) + "...");
+                    
+                    // Kép betöltésének ellenőrzése
+                    if (overlayImg.complete && overlayImg.naturalWidth > 0) {
+                        console.log("✅ Overlay már betöltődött");
+                        console.log("📏 Overlay mérete:", overlayImg.naturalWidth, "x", overlayImg.naturalHeight);
+                    } else {
+                        console.log("⏳ Overlay még betöltődik...");
+                        
+                        // Eseményfigyelők
+                        overlayImg.onload = function() {
+                            console.log("✅ Overlay betöltődött!");
+                            console.log("📏 Mérete:", this.naturalWidth, "x", this.naturalHeight);
+                        };
+                        
+                        overlayImg.onerror = function() {
+                            console.log("❌ Hiba az overlay betöltésénél!");
+                        };
+                    }
+                } else {
+                    console.log("⚠️ Overlay-nak nincs src attribútuma");
+                }
+            } else {
+                console.log("⚠️ Overlay kép elem nem található");
+            }
+        });
+
+
+
+
+
+
+
+
+
+
 
 
 
