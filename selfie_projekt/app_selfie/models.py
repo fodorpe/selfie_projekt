@@ -48,6 +48,9 @@ class PhotoSession(models.Model):
     def __str__(self):
         return f"{self.user_email} - {self.created_at}"
 
+    
+
+
 
 class Photo(models.Model):
     """

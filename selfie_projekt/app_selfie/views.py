@@ -9,6 +9,12 @@ from .send_email import kuldo_email
 from .models import AdminSettings, PhotoSession
 
 
+from PIL import Image
+import io
+from django.core.files.base import ContentFile
+
+
+
 
 
 # IMPORTÁLJUK A RASPBERRY KAMERÁT
@@ -411,6 +417,11 @@ def generate_qr_code(request):
 def qr_display_view(request):
     """QR kód megjelenítő oldal"""
     return render(request, 'qr_display.html')
+
+
+
+
+
 
 
 
