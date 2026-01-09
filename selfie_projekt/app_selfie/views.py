@@ -49,17 +49,21 @@ def raspberry_camera_view(request):
             </html>
         """)
     
-    # Ellenőrizzük, hogy elérhető-e a Raspberry kamera
-    if not RASPBERRY_CAMERA_AVAILABLE:
+    # Ellenőrizzük, hogy elérhető-e a Raspberry kamera - DINAMIKUSAN!
+    camera = RaspberryCamera()
+    camera_available = camera.camera_type != 'none'
+    
+    if not camera_available:
         return render(request, "error.html", {
             'error': "Raspberry kamera nem elérhető",
-            'message': "A rendszer nem találja a Raspberry kamerát. Próbáld a laptop kamerát."
+            'message': f"A rendszer nem találja a Raspberry kamerát. Kamera típus: {camera.camera_type}"
         })
     
     return render(request, "raspberry_camera.html", {
         'email': email,
-        'camera_available': RASPBERRY_CAMERA_AVAILABLE
+        'camera_available': camera_available
     })
+
 
 
 
@@ -72,21 +76,25 @@ def raspberry_take_photo(request):
     Kép készítése Raspberry Pi kamerával
     """
     try:
-        if not RASPBERRY_CAMERA_AVAILABLE:
+        # Mindig ellenőrizzük dinamikusan!
+        camera = RaspberryCamera()
+        camera_available = camera.camera_type != 'none'
+        
+        if not camera_available:
             return JsonResponse({
                 'success': False,
-                'message': 'Raspberry kamera nem elérhető'
+                'message': f'Raspberry kamera nem elérhető. Kamera típus: {camera.camera_type}'
             })
         
         # Kép készítése
-        camera = RaspberryCamera()
         photo_data = camera.take_photo_base64()
         
         if photo_data:
             return JsonResponse({
                 'success': True,
                 'photo_data': photo_data,
-                'message': 'Kép sikeresen készült'
+                'message': 'Kép sikeresen készült',
+                'camera_type': camera.camera_type
             })
         else:
             return JsonResponse({
