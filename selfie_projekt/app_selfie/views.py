@@ -13,6 +13,7 @@ from PIL import Image
 import io
 from django.core.files.base import ContentFile
 
+import threading
 
 
 
@@ -291,22 +292,6 @@ def kuldes(request):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 @csrf_exempt
 def email_kuldes(request):
     """Email küldés - most már admin emaillel is ÉS kép mentéssel"""
@@ -458,6 +443,71 @@ Időpont: {session.created_at.strftime('%Y.%m.%d %H:%M:%S')}
 
 
 
+
+
+# Globális LED controller (ha van)
+led_controller = None
+
+def init_led_controller():
+    """LED controller inicializálása (ha Raspberry Pi-en fut)"""
+    global led_controller
+    try:
+        from .raspberry_led_controller import LEDController
+        led_controller = LEDController()
+        print("✅ LED Controller inicializálva")
+        return True
+    except Exception as e:
+        print(f"⚠️ LED Controller nem elérhető: {e}")
+        led_controller = None
+        return False
+
+def raspberry_led_test(request):
+    """LED teszt endpoint"""
+    if not led_controller:
+        return JsonResponse({
+            'success': False,
+            'message': 'LED controller nincs inicializálva'
+        })
+    
+    try:
+        # Szálban futtatjuk, hogy ne blokkolja a web kérést
+        def run_led_sequence():
+            led_controller.countdown_sequence(5)
+        
+        thread = threading.Thread(target=run_led_sequence)
+        thread.start()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'LED visszaszámlálás indítva (5 másodperc)'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Hiba: {str(e)}'
+        })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 '''
 @csrf_exempt
 def email_kuldes(request):
@@ -580,15 +630,6 @@ def generate_qr_code(request):
 def qr_display_view(request):
     """QR kód megjelenítő oldal"""
     return render(request, 'qr_display.html')
-
-
-
-
-
-
-
-
-
 
 
 
