@@ -1,9 +1,10 @@
+#!/usr/bin/env python3
 import subprocess
 import base64
 import os
 
 class RaspberryCamera:
-    """Raspberry Pi kamera osztály"""
+    """Raspberry Pi kamera osztály - MINDEN METÓDUSSAL"""
     
     def __init__(self):
         self.camera_type = self._detect_camera_type()
@@ -12,7 +13,6 @@ class RaspberryCamera:
     def _detect_camera_type(self):
         """Kamera típusának automatikus detektálása"""
         try:
-            # Próbáljuk meghatározni a kamera típusát
             result = subprocess.run(['libcamera-hello', '--list-cameras'],
                                   capture_output=True, text=True, timeout=3)
             
@@ -25,8 +25,7 @@ class RaspberryCamera:
             elif 'ov5647' in result.stdout.lower():
                 return 'Camera Module 1 (OV5647)'
             else:
-                return 'Ismeretlen Raspberry Pi kamera'
-                
+                return 'Raspberry Pi Camera'
         except Exception:
             return 'Kamera típus nem detektálható'
     
@@ -40,7 +39,7 @@ class RaspberryCamera:
             return False
     
     def capture_photo(self, width=640, height=480):
-        """Fénykép készítése"""
+        """Fénykép készítése - az EGYETLEN képkészítő metódus"""
         try:
             # Kép készítése
             subprocess.run(['libcamera-jpeg', '-o', '/tmp/photo.jpg',
@@ -62,14 +61,37 @@ class RaspberryCamera:
                 'message': str(e),
                 'camera_type': self.camera_type
             }
+    
+    # ALIAS metódusok - régi kód kompatibilitás miatt
+    def take_photo_base64(self, width=640, height=480):
+        """Alias capture_photo() metódushoz (régi kód miatt)"""
+        return self.capture_photo(width, height)
+    
+    def take_photo(self, width=640, height=480):
+        """Alias capture_photo() metódushoz (régi kód miatt)"""
+        return self.capture_photo(width, height)
+    
+    def get_base64_photo(self, width=640, height=480):
+        """Alias capture_photo() metódushoz (régi kód miatt)"""
+        return self.capture_photo(width, height)
 
-# Gyors függvények a régi kód kompatibilitásához
+# ÖSSZES kompatibilitási függvény a régi kódhoz
 def check_camera():
-    """Gyors kamera ellenőrzés (régi kód kompatibilitás)"""
+    """Gyors kamera ellenőrzés"""
     camera = RaspberryCamera()
     return camera.available
 
 def take_photo():
-    """Gyors fénykép készítés (régi kód kompatibilitás)"""
+    """Gyors fénykép készítés"""
     camera = RaspberryCamera()
     return camera.capture_photo()
+
+def take_photo_base64():
+    """Gyors fénykép készítés base64 formátumban"""
+    camera = RaspberryCamera()
+    return camera.capture_photo()
+
+# Deprecated - de használhatod őket
+is_camera_available = check_camera
+capture_image = take_photo
+get_photo = take_photo_base64
