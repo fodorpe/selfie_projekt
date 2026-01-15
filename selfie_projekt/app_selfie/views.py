@@ -15,13 +15,77 @@ from django.core.files.base import ContentFile
 
 import threading
 
-
+import subprocess
 
 
 # IMPORTÁLJUK A RASPBERRY KAMERÁT
 from .raspberry_camera import RaspberryCamera
 
 from .raspberry_camera import check_camera, take_photo
+
+
+
+
+
+
+
+
+
+
+
+
+
+def raspberry_start_preview(request):
+    """Egyszerű preview indítás"""
+    if request.method == 'POST':
+        return JsonResponse({'success': True, 'message': 'Preview elindítva (demo)'})
+    return JsonResponse({'success': False, 'message': 'Csak POST'})
+
+def raspberry_stop_preview(request):
+    """Egyszerű preview leállítás"""
+    if request.method == 'POST':
+        return JsonResponse({'success': True, 'message': 'Preview leállítva (demo)'})
+    return JsonResponse({'success': False, 'message': 'Csak POST'})
+
+def raspberry_get_preview(request):
+    """Demo preview kép"""
+    if request.method == 'POST':
+        # Demo base64 kép (fehér 1x1 pixel)
+        demo_image = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+        return JsonResponse({'success': True, 'photo_data': demo_image})
+    return JsonResponse({'success': False, 'message': 'Csak POST'})
+
+def raspberry_take_photo(request):
+    """Demo kép készítés"""
+    if request.method == 'POST':
+        # Demo base64 kép (fehér 1x1 pixel)
+        demo_image = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+        return JsonResponse({'success': True, 'photo_data': demo_image})
+    return JsonResponse({'success': False, 'message': 'Csak POST'})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def raspberry_view(request):
     email = request.GET.get('email', '')
