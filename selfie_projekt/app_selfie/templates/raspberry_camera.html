@@ -300,7 +300,79 @@
         <button id="sendPhotoBtn" onclick="sendPhoto()" disabled>📤 Kép küldése (Raspberry Pi)</button>
     </div>
 
+
+
+
+    <div style="position: fixed; top: 10px; right: 10px; background: white; padding: 10px; border: 1px solid #ccc; z-index: 1000;">
+    <h4>Debug</h4>
+    <button onclick="testPost()">Test POST</button>
+    <button onclick="testGet()">Test GET</button>
+    <div id="debugResult" style="margin-top: 10px; font-size: 12px;"></div>
+    </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     <script>
+        
+        // Debug funkciók
+        function testPost() {
+            fetch('/raspberry-start-preview/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({test: true})
+            })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('debugResult').innerHTML = 
+                    `POST: ${JSON.stringify(data)}`;
+            })
+            .catch(e => {
+                document.getElementById('debugResult').innerHTML = 
+                    `POST Hiba: ${e}`;
+            });
+        }
+
+        function testGet() {
+            fetch('/raspberry-start-preview/')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('debugResult').innerHTML = 
+                    `GET: ${JSON.stringify(data)}`;
+            })
+            .catch(e => {
+                document.getElementById('debugResult').innerHTML = 
+                    `GET Hiba: ${e}`;
+            });
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         // VÁLTOZÓK
         let currentPhotoData = null;
         let raspberryCameraActive = false;
