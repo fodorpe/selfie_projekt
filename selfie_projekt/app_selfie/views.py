@@ -35,7 +35,7 @@ from .raspberry_camera import check_camera, take_photo
 
 
 
-@csrf_exempt  # ⚠️ FONTOS: Kikapcsolja a CSRF védelmet ehhez a view-hoz
+@csrf_exempt  #  FONTOS: Kikapcsolja a CSRF védelmet ehhez a view-hoz
 def raspberry_start_preview(request):
     """Preview indítása"""
     print(f"🎬 /raspberry-start-preview/ - {request.method}")
@@ -62,7 +62,7 @@ def raspberry_start_preview(request):
         'method': request.method
     })
 
-@csrf_exempt  # ⚠️ FONTOS
+@csrf_exempt  #  FONTOS
 def raspberry_stop_preview(request):
     """Preview leállítása"""
     print(f"🛑 /raspberry-stop-preview/ - {request.method}")
@@ -78,7 +78,7 @@ def raspberry_stop_preview(request):
         'message': 'Csak POST'
     })
 
-@csrf_exempt  # ⚠️ FONTOS
+@csrf_exempt  #  FONTOS
 def raspberry_get_preview(request):
     """Preview kép lekérése"""
     print(f"📸 /raspberry-get-preview/ - {request.method}")
@@ -104,7 +104,7 @@ def raspberry_get_preview(request):
         'message': 'Csak POST'
     })
 
-@csrf_exempt  # ⚠️ FONTOS
+@csrf_exempt  #  FONTOS
 def raspberry_take_photo(request):
     """Kép készítése"""
     print(f"📷 /raspberry-take-photo/ - {request.method}")
