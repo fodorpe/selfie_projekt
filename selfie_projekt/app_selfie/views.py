@@ -21,7 +21,19 @@ import threading
 # IMPORTÁLJUK A RASPBERRY KAMERÁT
 from .raspberry_camera import RaspberryCamera
 
+from .raspberry_camera import check_camera, take_photo
 
+def raspberry_view(request):
+    email = request.GET.get('email', '')
+    return render(request, 'camera.html', {
+        'email': email,
+        'camera_available': check_camera()
+    })
+
+def take_photo_view(request):
+    if request.method == 'POST':
+        result = take_photo()
+        return JsonResponse(result)
 
 
 

@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
 import subprocess
 import base64
+import os
 
 def check_camera():
     """Egyszerű kamera ellenőrzés"""
@@ -8,14 +8,15 @@ def check_camera():
         result = subprocess.run(['libcamera-hello', '--timeout', '100'],
                               capture_output=True, text=True, timeout=2)
         return result.returncode == 0
-    except:
+    except Exception:
         return False
 
 def take_photo():
     """Fénykép készítése"""
     try:
         # Kép készítése
-        subprocess.run(['libcamera-jpeg', '-o', '/tmp/photo.jpg', '--width', '640', '--height', '480'], 
+        subprocess.run(['libcamera-jpeg', '-o', '/tmp/photo.jpg', 
+                       '--width', '640', '--height', '480'], 
                       check=True, timeout=5)
         
         # Base64 konvertálás
@@ -32,6 +33,14 @@ def take_photo():
             'message': str(e)
         }
 
-# Flask route-okhoz használd ezeket:
-# camera_available = check_camera()
-# photo_result = take_photo()
+# Ha osztályt szeretnél, itt van:
+class RaspberryCamera:
+    """Osztály a Raspberry Pi kamerához"""
+    
+    @staticmethod
+    def is_available():
+        return check_camera()
+    
+    @staticmethod
+    def capture():
+        return take_photo()
