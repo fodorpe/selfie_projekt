@@ -2,296 +2,90 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <title>Raspberry Pi Selfie Kamera</title>
+    <title>Raspberry Pi Kamera</title>
     <style>
-        body {
-            text-align: center;
-            font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-            margin: 0;
-            padding: 20px;
-        }
-        
-        .email-display {
-            margin: 20px auto;
-            padding: 15px;
-            background-color: #e3f2fd;
-            border-radius: 10px;
-            border: 2px solid #2196F3;
-            max-width: 500px;
-            font-size: 18px;
-        }
-        
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 30px;
-        }
-        
-        .camera-status {
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 10px;
-            font-weight: bold;
-        }
-        
-        .camera-status.ready {
-            background-color: #e8f5e9;
-            color: #2e7d32;
-            border: 1px solid #a5d6a7;
-        }
-        
-        .camera-status.error {
-            background-color: #ffebee;
-            color: #c62828;
-            border: 1px solid #ef9a9a;
-        }
-        
-        #photoPreview {
-            width: 100%;
-            max-width: 480px;
-            height: 360px;
-            margin: 20px auto;
-            border: 3px solid #ddd;
-            border-radius: 10px;
-            background-color: #f0f0f0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #666;
-            font-size: 18px;
-        }
-        
-        #photoPreview img {
-            max-width: 100%;
-            max-height: 100%;
-            border-radius: 8px;
-        }
-        
-        .buttons {
-            margin: 30px 0;
-        }
-        
-        button {
-            padding: 15px 30px;
-            font-size: 18px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin: 10px;
-            transition: all 0.3s;
-        }
-        
-        #takePhotoBtn {
-            background-color: #ff9800;
-            color: white;
-        }
-        
-        #takePhotoBtn:hover:not(:disabled) {
-            background-color: #e68a00;
-        }
-        
-        #sendPhotoBtn {
-            background-color: #4CAF50;
-            color: white;
-        }
-        
-        #sendPhotoBtn:hover:not(:disabled) {
-            background-color: #45a049;
-        }
-        
-        button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        
-        #countdown {
-            font-size: 32px;
-            margin: 20px;
-            height: 40px;
-            font-weight: bold;
-            color: #2196F3;
-        }
-        
-        .status-message {
-            margin: 20px;
-            padding: 15px;
-            border-radius: 10px;
-            font-weight: bold;
-        }
-        
-        .status-message.success {
-            background-color: #e8f5e9;
-            color: #2e7d32;
-            border: 1px solid #a5d6a7;
-        }
-        
-        .status-message.error {
-            background-color: #ffebee;
-            color: #c62828;
-            border: 1px solid #ef9a9a;
-        }
+        body { text-align: center; font-family: Arial; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        #photoPreview { width: 480px; height: 360px; margin: 20px auto; border: 2px solid #ccc; }
+        #photoPreview img { max-width: 100%; max-height: 100%; }
+        button { padding: 10px 20px; font-size: 16px; margin: 10px; }
+        #countdown { font-size: 24px; margin: 10px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- EMAIL CÍM MEGJELENÍTÉSE -->
-        <div class="email-display">
-            📧 Email cím: <strong>{{ email }}</strong>
-        </div>
+        <h1>📸 Raspberry Pi Kamera</h1>
         
-        <h1>📸 Raspberry Pi Selfie Kamera</h1>
-        
-        <!-- Kamera státusz -->
-        <div id="cameraStatus" class="camera-status">
+        <div id="cameraStatus">
             {% if camera_available %}
-                ✅ Raspberry Pi kamera elérhető
+                ✅ Kamera elérhető
             {% else %}
-                ❌ Raspberry Pi kamera nem elérhető
+                ❌ Kamera nem elérhető
             {% endif %}
         </div>
         
-        <!-- Visszaszámlálás -->
         <div id="countdown"></div>
         
-        <!-- Kép előnézet -->
         <div id="photoPreview">
             <div>Kattints a "Kép készítése" gombra</div>
         </div>
         
-        <!-- Gombok -->
-        <div class="buttons">
+        <div>
             <button id="takePhotoBtn" onclick="startCountdown()">Kép készítése</button>
             <button id="sendPhotoBtn" onclick="sendPhoto()" disabled>📤 Kép küldése</button>
         </div>
         
-        <!-- Vissza gomb -->
-        <div style="margin-top: 30px;">
-            <a href="/">⬅️ Vissza a kezdőoldalra</a>
-        </div>
-        
-        <!-- Állapotüzenet -->
-        <div id="statusMessage" class="status-message"></div>
+        <div id="statusMessage"></div>
     </div>
 
     <script>
         let currentPhotoData = null;
         
         function startCountdown() {
-            let count = 5;
-            const countdownElement = document.getElementById('countdown');
-            const takePhotoBtn = document.getElementById('takePhotoBtn');
-            const sendPhotoBtn = document.getElementById('sendPhotoBtn');
-            const statusMessage = document.getElementById('statusMessage');
+            let count = 3;
+            document.getElementById('takePhotoBtn').disabled = true;
             
-            // Gombok letiltása
-            takePhotoBtn.disabled = true;
-            sendPhotoBtn.disabled = true;
-            
-            // Számláló indítása
-            countdownElement.textContent = count;
-            countdownElement.style.color = '#2196F3';
-            
-            statusMessage.textContent = `Készülj! Kép ${count} másodperc múlva...`;
-            statusMessage.className = 'status-message';
-            
-            const timer = setInterval(function() {
+            const timer = setInterval(() => {
+                document.getElementById('countdown').textContent = count;
                 count--;
-                countdownElement.textContent = count;
-                statusMessage.textContent = `Készülj! Kép ${count} másodperc múlva...`;
                 
-                // Szín változtatás
-                if (count <= 2) {
-                    countdownElement.style.color = '#f44336';
-                }
-                
-                if (count <= 0) {
+                if (count < 0) {
                     clearInterval(timer);
-                    countdownElement.textContent = "MOSOLYOGJ! 😊";
-                    statusMessage.textContent = "Kép készítése...";
-                    
-                    // Raspberry kamerával kép készítése
-                    setTimeout(takePicture, 500);
+                    document.getElementById('countdown').textContent = "";
+                    takePicture();
                 }
             }, 1000);
         }
         
         function takePicture() {
-            const statusMessage = document.getElementById('statusMessage');
-            const takePhotoBtn = document.getElementById('takePhotoBtn');
-            const sendPhotoBtn = document.getElementById('sendPhotoBtn');
-            
-            statusMessage.textContent = "Kamera használata...";
-            
-            // Raspberry Pi kamera hívása
             fetch('/raspberry-take-photo/', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+                headers: {'Content-Type': 'application/json'}
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     currentPhotoData = data.photo_data;
-                    
-                    // Kép megjelenítése
-                    const photoPreview = document.getElementById('photoPreview');
-                    photoPreview.innerHTML = `<img src="${data.photo_data}" alt="Készült kép">`;
-                    
-                    // Gombok engedélyezése
-                    takePhotoBtn.disabled = false;
-                    sendPhotoBtn.disabled = false;
-                    
-                    statusMessage.textContent = "✅ Kép készült!";
-                    statusMessage.className = 'status-message success';
-                    
-                    // Visszaszámláló visszaállítása
-                    document.getElementById('countdown').textContent = "";
-                    
+                    document.getElementById('photoPreview').innerHTML = 
+                        `<img src="${data.photo_data}" alt="Készült kép">`;
+                    document.getElementById('takePhotoBtn').disabled = false;
+                    document.getElementById('sendPhotoBtn').disabled = false;
                 } else {
-                    statusMessage.textContent = "❌ Hiba: " + data.message;
-                    statusMessage.className = 'status-message error';
-                    takePhotoBtn.disabled = false;
+                    alert("Hiba: " + data.message);
+                    document.getElementById('takePhotoBtn').disabled = false;
                 }
-            })
-            .catch(error => {
-                statusMessage.textContent = "❌ Hálózati hiba";
-                statusMessage.className = 'status-message error';
-                takePhotoBtn.disabled = false;
             });
         }
         
         function sendPhoto() {
-            const sendPhotoBtn = document.getElementById('sendPhotoBtn');
-            const statusMessage = document.getElementById('statusMessage');
+            if (!currentPhotoData) return;
+            
             const email = "{{ email }}";
+            document.getElementById('sendPhotoBtn').disabled = true;
             
-            if (!currentPhotoData) {
-                alert("Nincs kép!");
-                return;
-            }
-            
-            // Gomb letiltása
-            sendPhotoBtn.disabled = true;
-            sendPhotoBtn.textContent = "Küldés...";
-            
-            statusMessage.textContent = "Email küldése...";
-            
-            // Küldés a meglévő email_kuldes endpoint-nak
             fetch('/kuldes/', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     email: email,
                     kep: currentPhotoData
@@ -300,31 +94,11 @@
             .then(response => response.json())
             .then(data => {
                 if (data.siker) {
-                    sendPhotoBtn.textContent = "✅ Elküldve";
-                    sendPhotoBtn.style.backgroundColor = '#2196F3';
-                    statusMessage.textContent = "✅ Kép sikeresen elküldve!";
-                    statusMessage.className = 'status-message success';
-                    
-                    // 5 másodperc után visszaállítás
-                    setTimeout(() => {
-                        sendPhotoBtn.textContent = "📤 Kép küldése";
-                        sendPhotoBtn.style.backgroundColor = '';
-                        sendPhotoBtn.disabled = true;
-                        statusMessage.textContent = "";
-                    }, 5000);
-                    
+                    document.getElementById('statusMessage').textContent = "✅ Kép elküldve!";
                 } else {
-                    sendPhotoBtn.textContent = "📤 Kép küldése";
-                    sendPhotoBtn.disabled = false;
-                    statusMessage.textContent = "❌ Hiba: " + data.uzenet;
-                    statusMessage.className = 'status-message error';
+                    document.getElementById('statusMessage').textContent = "❌ Hiba: " + data.uzenet;
+                    document.getElementById('sendPhotoBtn').disabled = false;
                 }
-            })
-            .catch(error => {
-                sendPhotoBtn.textContent = "📤 Kép küldése";
-                sendPhotoBtn.disabled = false;
-                statusMessage.textContent = "❌ Hálózati hiba";
-                statusMessage.className = 'status-message error';
             });
         }
     </script>
