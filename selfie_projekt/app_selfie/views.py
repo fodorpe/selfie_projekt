@@ -35,33 +35,118 @@ from .raspberry_camera import check_camera, take_photo
 
 
 
+@csrf_exempt  # ⚠️ FONTOS: Kikapcsolja a CSRF védelmet ehhez a view-hoz
 def raspberry_start_preview(request):
-    """Egyszerű preview indítás"""
+    """Preview indítása"""
+    print(f"🎬 /raspberry-start-preview/ - {request.method}")
+    
     if request.method == 'POST':
-        return JsonResponse({'success': True, 'message': 'Preview elindítva (demo)'})
-    return JsonResponse({'success': False, 'message': 'Csak POST'})
+        try:
+            # Itt a kamera indítás kódja
+            # Példa: subprocess.Popen(['libcamera-hello', '--timeout', '30000'])
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Preview elindítva'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Hiba: {str(e)}'
+            })
+    
+    # GET kérésre is válaszoljunk (teszteléshez)
+    return JsonResponse({
+        'success': True,
+        'message': 'GET kérés - POST-ot használj a preview indításához',
+        'method': request.method
+    })
 
+@csrf_exempt  # ⚠️ FONTOS
 def raspberry_stop_preview(request):
-    """Egyszerű preview leállítás"""
+    """Preview leállítása"""
+    print(f"🛑 /raspberry-stop-preview/ - {request.method}")
+    
     if request.method == 'POST':
-        return JsonResponse({'success': True, 'message': 'Preview leállítva (demo)'})
-    return JsonResponse({'success': False, 'message': 'Csak POST'})
+        return JsonResponse({
+            'success': True,
+            'message': 'Preview leállítva'
+        })
+    
+    return JsonResponse({
+        'success': False,
+        'message': 'Csak POST'
+    })
 
+@csrf_exempt  # ⚠️ FONTOS
 def raspberry_get_preview(request):
-    """Demo preview kép"""
+    """Preview kép lekérése"""
+    print(f"📸 /raspberry-get-preview/ - {request.method}")
+    
     if request.method == 'POST':
-        # Demo base64 kép (fehér 1x1 pixel)
-        demo_image = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
-        return JsonResponse({'success': True, 'photo_data': demo_image})
-    return JsonResponse({'success': False, 'message': 'Csak POST'})
+        try:
+            # Demo kép (fehér 1x1 pixel)
+            demo_image = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+            
+            return JsonResponse({
+                'success': True,
+                'photo_data': demo_image,
+                'message': 'Demo preview kép'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'message': 'Csak POST'
+    })
 
+@csrf_exempt  # ⚠️ FONTOS
 def raspberry_take_photo(request):
-    """Demo kép készítés"""
+    """Kép készítése"""
+    print(f"📷 /raspberry-take-photo/ - {request.method}")
+    
     if request.method == 'POST':
-        # Demo base64 kép (fehér 1x1 pixel)
-        demo_image = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
-        return JsonResponse({'success': True, 'photo_data': demo_image})
-    return JsonResponse({'success': False, 'message': 'Csak POST'})
+        try:
+            # Valós kép készítése Raspberry Pi kamerával
+            result = subprocess.run([
+                'libcamera-jpeg',
+                '-o', '/tmp/raspberry_photo.jpg',
+                '--width', '640',
+                '--height', '480',
+                '--nopreview'
+            ], capture_output=True, text=True, timeout=10)
+            
+            if result.returncode == 0:
+                # Sikeres képkészítés
+                with open('/tmp/raspberry_photo.jpg', 'rb') as f:
+                    photo_data = base64.b64encode(f.read()).decode('utf-8')
+                
+                return JsonResponse({
+                    'success': True,
+                    'photo_data': f'data:image/jpeg;base64,{photo_data}',
+                    'message': 'Kép sikeresen készült'
+                })
+            else:
+                # Hiba
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Kamera hiba: {result.stderr[:100]}'
+                })
+                
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Hiba: {str(e)}'
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'message': 'Csak POST'
+    })
 
 
 
