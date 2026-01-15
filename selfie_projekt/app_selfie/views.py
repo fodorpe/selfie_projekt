@@ -19,12 +19,7 @@ import threading
 
 
 # IMPORTÁLJUK A RASPBERRY KAMERÁT
-try:
-    from .raspberry_camera import RaspberryCamera
-    RASPBERRY_CAMERA_AVAILABLE = True
-except ImportError:
-    RASPBERRY_CAMERA_AVAILABLE = False
-    RaspberryCamera = None
+from .raspberry_camera import RaspberryCamera
 
 
 
