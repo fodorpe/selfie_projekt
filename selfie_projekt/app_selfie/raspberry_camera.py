@@ -10,35 +10,38 @@ class RaspberryCamera:
         self.camera_type = self._detect_camera_type()
         self.available = self._check_availability()
     
-    def _detect_camera_type(self):
-        """
-        Kamera típusának becslése.
-        Ha működik a kamera, de nem tudjuk a szenzort, akkor általános értéket adunk vissza.
-        """
+    def _check_availability(self):
         try:
             result = subprocess.run(
-                ['libcamera-hello', '--timeout', '100'],
+                ['libcamera-still', '--timeout', '100', '--nopreview'],
                 capture_output=True,
-                text=True,
                 timeout=2
             )
-
-            if result.returncode == 0:
-                return 'Raspberry Pi Camera'
-            else:
-                return 'Kamera nem válaszol'
-        except Exception:
-            return 'Kamera típus nem detektálható'
-
-    
-    def _check_availability(self):
-        """Kamera elérhetőségének ellenőrzése"""
-        try:
-            result = subprocess.run(['libcamera-hello', '--timeout', '100'],
-                                  capture_output=True, text=True, timeout=2)
             return result.returncode == 0
         except Exception:
             return False
+
+
+    def _detect_camera_type(self):
+        try:
+            result = subprocess.run(
+                ['libcamera-still', '--list-cameras'],
+                capture_output=True,
+                text=True,
+                timeout=3
+            )
+            out = result.stdout.lower()
+
+            if 'imx219' in out:
+                return 'Camera Module 2 (IMX219)'
+            elif 'imx477' in out:
+                return 'HQ Camera (IMX477)'
+            elif 'imx708' in out:
+                return 'Camera Module 3 (IMX708)'
+            else:
+                return 'Raspberry Pi Camera'
+        except Exception:
+            return 'Kamera típus nem detektálható'
     
     def capture_photo(self, width=640, height=480):
         """Fénykép készítése"""
