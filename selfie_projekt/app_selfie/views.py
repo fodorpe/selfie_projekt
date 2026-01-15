@@ -35,39 +35,39 @@ from .raspberry_camera import check_camera, take_photo
 
 
 
-@csrf_exempt  #  FONTOS: Kikapcsolja a CSRF védelmet ehhez a view-hoz
+@csrf_exempt
 def raspberry_start_preview(request):
-    """Preview indítása"""
-    print(f"🎬 /raspberry-start-preview/ - {request.method}")
+    """Preview indítása - EMOJI NÉLKÜL"""
+    print(f"[START PREVIEW] /raspberry-start-preview/ - {request.method}")
     
     if request.method == 'POST':
         try:
             # Itt a kamera indítás kódja
-            # Példa: subprocess.Popen(['libcamera-hello', '--timeout', '30000'])
+            print("Kamera preview indítása...")
             
             return JsonResponse({
                 'success': True,
                 'message': 'Preview elindítva'
             })
         except Exception as e:
+            print(f"HIBA: {str(e)}")
             return JsonResponse({
                 'success': False,
                 'message': f'Hiba: {str(e)}'
             })
     
-    # GET kérésre is válaszoljunk (teszteléshez)
     return JsonResponse({
         'success': True,
-        'message': 'GET kérés - POST-ot használj a preview indításához',
-        'method': request.method
+        'message': 'GET kérés - POST-ot használj'
     })
 
-@csrf_exempt  #  FONTOS
+@csrf_exempt
 def raspberry_stop_preview(request):
-    """Preview leállítása"""
-    print(f"🛑 /raspberry-stop-preview/ - {request.method}")
+    """Preview leállítása - EMOJI NÉLKÜL"""
+    print(f"[STOP PREVIEW] /raspberry-stop-preview/ - {request.method}")
     
     if request.method == 'POST':
+        print("Kamera preview leállítása...")
         return JsonResponse({
             'success': True,
             'message': 'Preview leállítva'
@@ -78,13 +78,15 @@ def raspberry_stop_preview(request):
         'message': 'Csak POST'
     })
 
-@csrf_exempt  #  FONTOS
+@csrf_exempt
 def raspberry_get_preview(request):
-    """Preview kép lekérése"""
-    print(f"📸 /raspberry-get-preview/ - {request.method}")
+    """Preview kép lekérése - EMOJI NÉLKÜL"""
+    print(f"[GET PREVIEW] /raspberry-get-preview/ - {request.method}")
     
     if request.method == 'POST':
         try:
+            print("Preview kép készítése...")
+            
             # Demo kép (fehér 1x1 pixel)
             demo_image = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
             
@@ -94,6 +96,7 @@ def raspberry_get_preview(request):
                 'message': 'Demo preview kép'
             })
         except Exception as e:
+            print(f"HIBA: {str(e)}")
             return JsonResponse({
                 'success': False,
                 'message': str(e)
@@ -104,14 +107,16 @@ def raspberry_get_preview(request):
         'message': 'Csak POST'
     })
 
-@csrf_exempt  #  FONTOS
+@csrf_exempt
 def raspberry_take_photo(request):
-    """Kép készítése"""
-    print(f"📷 /raspberry-take-photo/ - {request.method}")
+    """Kép készítése - EMOJI NÉLKÜL"""
+    print(f"[TAKE PHOTO] /raspberry-take-photo/ - {request.method}")
     
     if request.method == 'POST':
         try:
-            # Valós kép készítése Raspberry Pi kamerával
+            print("Kép készítése Raspberry Pi kamerával...")
+            
+            # Valós kép készítése
             result = subprocess.run([
                 'libcamera-jpeg',
                 '-o', '/tmp/raspberry_photo.jpg',
@@ -121,7 +126,8 @@ def raspberry_take_photo(request):
             ], capture_output=True, text=True, timeout=10)
             
             if result.returncode == 0:
-                # Sikeres képkészítés
+                print("✅ Kép sikeresen készült")
+                
                 with open('/tmp/raspberry_photo.jpg', 'rb') as f:
                     photo_data = base64.b64encode(f.read()).decode('utf-8')
                 
@@ -131,13 +137,14 @@ def raspberry_take_photo(request):
                     'message': 'Kép sikeresen készült'
                 })
             else:
-                # Hiba
+                print(f"❌ Kamera hiba: {result.stderr[:100]}")
                 return JsonResponse({
                     'success': False,
                     'message': f'Kamera hiba: {result.stderr[:100]}'
                 })
                 
         except Exception as e:
+            print(f"❌ Hiba: {str(e)}")
             return JsonResponse({
                 'success': False,
                 'message': f'Hiba: {str(e)}'
