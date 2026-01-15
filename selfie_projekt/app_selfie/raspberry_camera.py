@@ -11,23 +11,25 @@ class RaspberryCamera:
         self.available = self._check_availability()
     
     def _detect_camera_type(self):
-        """Kamera típusának automatikus detektálása"""
+        """
+        Kamera típusának becslése.
+        Ha működik a kamera, de nem tudjuk a szenzort, akkor általános értéket adunk vissza.
+        """
         try:
-            result = subprocess.run(['libcamera-hello', '--list-cameras'],
-                                  capture_output=True, text=True, timeout=3)
-            
-            if 'imx219' in result.stdout.lower():
-                return 'Camera Module 2 (IMX219)'
-            elif 'imx477' in result.stdout.lower():
-                return 'HQ Camera (IMX477)'
-            elif 'imx708' in result.stdout.lower():
-                return 'Camera Module 3 (IMX708)'
-            elif 'ov5647' in result.stdout.lower():
-                return 'Camera Module 1 (OV5647)'
-            else:
+            result = subprocess.run(
+                ['libcamera-hello', '--timeout', '100'],
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+
+            if result.returncode == 0:
                 return 'Raspberry Pi Camera'
+            else:
+                return 'Kamera nem válaszol'
         except Exception:
             return 'Kamera típus nem detektálható'
+
     
     def _check_availability(self):
         """Kamera elérhetőségének ellenőrzése"""

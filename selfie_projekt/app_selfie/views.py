@@ -107,53 +107,6 @@ def raspberry_get_preview(request):
         'message': 'Csak POST'
     })
 
-@csrf_exempt
-def raspberry_take_photo(request):
-    """Kép készítése - EMOJI NÉLKÜL"""
-    print(f"[TAKE PHOTO] /raspberry-take-photo/ - {request.method}")
-    
-    if request.method == 'POST':
-        try:
-            print("Kép készítése Raspberry Pi kamerával...")
-            
-            # Valós kép készítése
-            result = subprocess.run([
-                'libcamera-jpeg',
-                '-o', '/tmp/raspberry_photo.jpg',
-                '--width', '640',
-                '--height', '480',
-                '--nopreview'
-            ], capture_output=True, text=True, timeout=10)
-            
-            if result.returncode == 0:
-                print("✅ Kép sikeresen készült")
-                
-                with open('/tmp/raspberry_photo.jpg', 'rb') as f:
-                    photo_data = base64.b64encode(f.read()).decode('utf-8')
-                
-                return JsonResponse({
-                    'success': True,
-                    'photo_data': f'data:image/jpeg;base64,{photo_data}',
-                    'message': 'Kép sikeresen készült'
-                })
-            else:
-                print(f"❌ Kamera hiba: {result.stderr[:100]}")
-                return JsonResponse({
-                    'success': False,
-                    'message': f'Kamera hiba: {result.stderr[:100]}'
-                })
-                
-        except Exception as e:
-            print(f"❌ Hiba: {str(e)}")
-            return JsonResponse({
-                'success': False,
-                'message': f'Hiba: {str(e)}'
-            })
-    
-    return JsonResponse({
-        'success': False,
-        'message': 'Csak POST'
-    })
 
 
 
@@ -215,13 +168,13 @@ def raspberry_camera_view(request):
     
     # Ellenőrizzük, hogy elérhető-e a Raspberry kamera - DINAMIKUSAN!
     camera = RaspberryCamera()
-    camera_available = camera.camera_type != 'none'
+
     
-    if not camera_available:
+    if not camera.available:
         return render(request, "error.html", {
             'error': "Raspberry kamera nem elérhető",
-            'message': f"A rendszer nem találja a Raspberry kamerát. Kamera típus: {camera.camera_type}"
-        })
+            'message': "A kamera nem válaszol a libcamera-hello hívásra."
+    })
     
     return render(request, "raspberry_camera.html", {
         'email': email,
