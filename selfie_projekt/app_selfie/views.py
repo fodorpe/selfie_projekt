@@ -80,41 +80,23 @@ def raspberry_camera_view(request):
 
 @csrf_exempt
 def raspberry_take_photo(request):
-    """
-    Kép készítése Raspberry Pi kamerával
-    """
-    try:
-        # Mindig ellenőrizzük dinamikusan!
-        camera = RaspberryCamera()
-        camera_available = camera.camera_type != 'none'
-        
-        if not camera_available:
-            return JsonResponse({
-                'success': False,
-                'message': f'Raspberry kamera nem elérhető. Kamera típus: {camera.camera_type}'
-            })
-        
-        # Kép készítése
-        photo_data = camera.take_photo_base64()
-        
-        if photo_data:
-            return JsonResponse({
-                'success': True,
-                'photo_data': photo_data,
-                'message': 'Kép sikeresen készült',
-                'camera_type': camera.camera_type
-            })
-        else:
-            return JsonResponse({
-                'success': False,
-                'message': 'Nem sikerült képet készíteni'
-            })
-            
-    except Exception as e:
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "Csak POST"}, status=405)
+
+    camera = RaspberryCamera()
+
+    # Itt inkább ezt használd:
+    if not camera.available:
         return JsonResponse({
-            'success': False,
-            'message': f'Hiba: {str(e)}'
+            "success": False,
+            "message": f"Raspberry kamera nem elérhető. Kamera típus: {camera.camera_type}"
         })
+
+    result = camera.capture_photo()  # ez egy dict: success/photo_data/camera_type/message
+
+    # Visszaadjuk úgy, ahogy van
+    return JsonResponse(result)
+
     
 
 
