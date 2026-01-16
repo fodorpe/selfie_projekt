@@ -13,13 +13,15 @@ class RaspberryCamera:
     def _check_availability(self):
         try:
             result = subprocess.run(
-                ['rpicam-still', '--timeout', '100', '--nopreview'],
+                ['rpicam-still', '--list-cameras'],
                 capture_output=True,
-                timeout=2
+                text=True,
+                timeout=3
             )
-            return result.returncode == 0
+            return 'imx' in result.stdout.lower()
         except Exception:
             return False
+
 
 
     def _detect_camera_type(self):
@@ -73,7 +75,7 @@ class RaspberryCamera:
         try:
             self.stop_preview()  # Előző leállítása
             self.preview_process = subprocess.Popen([
-                'rpi-hello',
+                'rpicam-hello',
                 '--width', str(width),
                 '--height', str(height),
                 '--timeout', str(timeout_ms)
