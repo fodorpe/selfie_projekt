@@ -173,7 +173,7 @@ def raspberry_camera_view(request):
     if not camera.available:
         return render(request, "error.html", {
             'error': "Raspberry kamera nem elérhető",
-            'message': "A kamera nem válaszol a libcamera-hello hívásra."
+            'message': "A kamera nem válaszol a rpicam-hello hívásra." #itt volt libcamera-helo
     })
     
     return render(request, "raspberry_camera.html", {
