@@ -27,6 +27,9 @@ urlpatterns = [
 
 
 
+    path("capture/", views.capture_view, name="capture"),
+
+
     path('raspberry-start-preview/', views.raspberry_start_preview, name='raspberry_start_preview'),
     path('raspberry-stop-preview/', views.raspberry_stop_preview, name='raspberry_stop_preview'),
     path('raspberry-get-preview/', views.raspberry_get_preview, name='raspberry_get_preview'),
