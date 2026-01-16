@@ -28,12 +28,12 @@ urlpatterns = [
 
     # Overlay / QR
     path('get-latest-overlay/', views.get_latest_overlay, name='get_latest_overlay'),
-    path('generate-qr/', views.generate_qr_code, name='generate_qr_code'),
-    path('qr-display/', views.qr_display_view, name='qr_display'),
+    # path('generate-qr/', views.generate_qr_code, name='generate_qr_code'),
+    # path('qr-display/', views.qr_display_view, name='qr_display'),
 
     # Admin & test
-    path('admin2/', views.admin2_view, name='admin2'),
-    path('test/', views.test_view, name='test'),
+    # path('admin2/', views.admin2_view, name='admin2'),
+    # path('test/', views.test_view, name='test'),
 
     # Photo save API (ha van külön)
     path('take-photo/', views.take_photo_view, name='take_photo'),
