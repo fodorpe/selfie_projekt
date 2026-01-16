@@ -54,7 +54,7 @@ with CAMERA_LOCK:
     frame = picam2.capture_array()
     picam2.stop()
     picam2.close()
-camera_lock = threading.Lock()
+    camera_lock = threading.Lock()
 
 
 
