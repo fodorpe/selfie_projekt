@@ -13,7 +13,7 @@ class RaspberryCamera:
     def _check_availability(self):
         try:
             result = subprocess.run(
-                ['libcamera-still', '--timeout', '100', '--nopreview'],
+                ['rpicam-still', '--timeout', '100', '--nopreview'],
                 capture_output=True,
                 timeout=2
             )
@@ -25,7 +25,7 @@ class RaspberryCamera:
     def _detect_camera_type(self):
         try:
             result = subprocess.run(
-                ['libcamera-still', '--list-cameras'],
+                ['rpicam-still', '--list-cameras'],
                 capture_output=True,
                 text=True,
                 timeout=3
@@ -47,7 +47,7 @@ class RaspberryCamera:
         """Fénykép készítése"""
         try:
             # Kép készítése
-            subprocess.run(['libcamera-jpeg', '-o', '/tmp/photo.jpg',
+            subprocess.run(['rpicam-jpeg', '-o', '/tmp/photo.jpg',
                           '--width', str(width), '--height', str(height)],
                          check=True, timeout=10)
             
@@ -73,7 +73,7 @@ class RaspberryCamera:
         try:
             self.stop_preview()  # Előző leállítása
             self.preview_process = subprocess.Popen([
-                'libcamera-hello',
+                'rpi-hello',
                 '--width', str(width),
                 '--height', str(height),
                 '--timeout', str(timeout_ms)
@@ -94,7 +94,7 @@ class RaspberryCamera:
     def get_quick_preview(self):
         """Gyors preview kép"""
         try:
-            subprocess.run(['libcamera-jpeg', '-o', '/tmp/preview.jpg',
+            subprocess.run(['rpicam-jpeg', '-o', '/tmp/preview.jpg',
                           '--width', '320', '--height', '240',
                           '--nopreview', '--immediate', '-q', '50'],
                          check=True, timeout=3)
