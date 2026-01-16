@@ -94,13 +94,16 @@ def raspberry_stop_preview(request):
 @csrf_exempt
 def raspberry_get_preview(request):
     if request.method != 'POST':
-        return JsonResponse({'success': False, 'message': 'Csak POST kérés engedélyezett'})
+        return JsonResponse({'success': False, 'message': 'Csak POST'})
 
     try:
         with CAMERA_LOCK:
+            # Ideiglenes preview kép készítése a ZSL opcióval (gyors és stabil)
             preview_file = PHOTO_DIR / "preview_tmp.jpg"
+
             subprocess.run([
-                'rpicam-jpeg',
+                'rpicam-still',       # rpicam-jpeg helyett rpicam-still --zsl a stabilitásért
+                '--zsl',              # Zero Shutter Lag
                 '-o', str(preview_file),
                 '--width', '320',
                 '--height', '240',
@@ -109,9 +112,9 @@ def raspberry_get_preview(request):
                 '-q', '50'
             ], check=True, timeout=5)
 
+            # Base64 konvertálás
             with open(preview_file, 'rb') as f:
                 jpeg_bytes = f.read()
-
             base64_image = base64.b64encode(jpeg_bytes).decode("utf-8")
 
         return JsonResponse({
@@ -124,7 +127,6 @@ def raspberry_get_preview(request):
         return JsonResponse({'success': False, 'message': 'A kamera nem válaszolt időben'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
-
 
 # ---------------------------------------------------------------------------
 # Raspberry kamera oldal
