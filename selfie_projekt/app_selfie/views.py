@@ -74,7 +74,7 @@ def selfie_view(request):
 
 def raspberry_view(request):
     email = request.GET.get('email', '')
-    return render(request, 'raspberry_camera.html', {
+    return render(request, 'camera.html', {
         'email': email,
         'camera_available': is_camera_available()
     })
