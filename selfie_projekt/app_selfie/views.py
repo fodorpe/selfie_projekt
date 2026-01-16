@@ -13,19 +13,6 @@ from PIL import Image
 import io
 from django.core.files.base import ContentFile
 
-import threading
-CAMERA_LOCK = threading.Lock()
-
-with CAMERA_LOCK:
-    picam2 = Picamera2()
-    config = picam2.create_preview_configuration(main={"size": (640, 480)})
-    picam2.configure(config)
-    picam2.start()
-    time.sleep(0.2)
-    frame = picam2.capture_array()
-    picam2.stop()
-    picam2.close()
-
 
 
 
@@ -55,7 +42,29 @@ SAVE_DIR = "/home/pi/photos"
 
 
 
+import threading
+CAMERA_LOCK = threading.Lock()
+
+with CAMERA_LOCK:
+    picam2 = Picamera2()
+    config = picam2.create_preview_configuration(main={"size": (640, 480)})
+    picam2.configure(config)
+    picam2.start()
+    time.sleep(0.2)
+    frame = picam2.capture_array()
+    picam2.stop()
+    picam2.close()
 camera_lock = threading.Lock()
+
+
+
+
+
+
+
+
+
+
 
 try:
     picam2 = Picamera2()
