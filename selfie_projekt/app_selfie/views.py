@@ -14,7 +14,7 @@ import io
 import qrcode
 
 # --- GLOBALIS BEALLITASOK ---
-PHOTO_DIR = Path("/home/pi/photos")
+PHOTO_DIR = Path("/home/peti/Desktop/projekt/asd")
 PHOTO_DIR.mkdir(parents=True, exist_ok=True)
 
 CAMERA_LOCK = threading.Lock()  # Garantálja, hogy egyszerre csak egy hívás használja a kamerát
