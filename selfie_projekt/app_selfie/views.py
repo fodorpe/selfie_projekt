@@ -16,7 +16,7 @@ from .models import PhotoSession, Photo, AdminSettings, UploadedImage
 from .raspberry_camera import RaspberryCamera, check_camera, take_photo
 
 # Globális fotó mentési könyvtár
-PHOTO_DIR = Path("/home/pi/photos")
+PHOTO_DIR = Path("/home/peti/Desktop/projekt/asd")
 PHOTO_DIR.mkdir(parents=True, exist_ok=True)
 
 # Kamera lock a párhuzamos hívásokhoz
