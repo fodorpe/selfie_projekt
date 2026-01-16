@@ -3,107 +3,115 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from pathlib import Path
 from datetime import datetime
-import subprocess
 import threading
-import json
+import subprocess
 import base64
-from io import BytesIO
-from PIL import Image
-import qrcode
-
+import json
 from .send_email import kuldo_email
 from .models import PhotoSession, Photo, AdminSettings, UploadedImage
-from .raspberry_camera import RaspberryCamera, check_camera, take_photo
+from PIL import Image
+import io
+import qrcode
 
-# Globális fotó mentési könyvtár
-PHOTO_DIR = Path("/home/peti/Desktop/projekt/asd")
+# --- GLOBALIS BEALLITASOK ---
+PHOTO_DIR = Path("/home/pi/photos")
 PHOTO_DIR.mkdir(parents=True, exist_ok=True)
 
-# Kamera lock a párhuzamos hívásokhoz
-CAMERA_LOCK = threading.Lock()
+CAMERA_LOCK = threading.Lock()  # Garantálja, hogy egyszerre csak egy hívás használja a kamerát
 
-# Inicializáljuk a Raspberry kamerát
-camera = RaspberryCamera()
+# --- HELYI FUNKCIÓK ---
+def is_camera_available() -> bool:
+    """Ellenőrizzük, hogy elérhető-e a kamera."""
+    try:
+        subprocess.run(["rpicam-still", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return True
+    except Exception:
+        return False
 
-
-# ---------------------------------------------------------------------------
-# Fotó készítése (rpicam-jpeg subprocess hívással)
-# ---------------------------------------------------------------------------
-@csrf_exempt
-def capture_view(request):
-    if request.method != "POST":
-        return JsonResponse({"saved": False, "error": "Csak POST kérés engedélyezett"}, status=405)
-
-    save_dir = PHOTO_DIR
-    save_dir.mkdir(parents=True, exist_ok=True)
+def capture_photo_file(width=640, height=480, quality=95) -> Path:
+    """Fénykép készítése a kamerával, visszaadja a fájl path-ját."""
+    PHOTO_DIR.mkdir(parents=True, exist_ok=True)
     filename = datetime.now().strftime("photo_%Y%m%d_%H%M%S.jpg")
-    filepath = save_dir / filename
+    filepath = PHOTO_DIR / filename
 
-    try:
-        with CAMERA_LOCK:
-            subprocess.run([
-                "rpicam-jpeg",
-                "-o", str(filepath),
-                "--width", "640",
-                "--height", "480",
-                "--nopreview",
-                "--immediate",
-                "-q", "95"
-            ], check=True, timeout=5)
+    with CAMERA_LOCK:
+        subprocess.run([
+            "rpicam-still",
+            "-o", str(filepath),
+            "--width", str(width),
+            "--height", str(height),
+            "--nopreview",
+            "--immediate",
+            "-q", str(quality)
+        ], check=True, timeout=5)
 
-        return JsonResponse({"saved": True, "file": str(filepath)})
-    except subprocess.TimeoutExpired:
-        return JsonResponse({"saved": False, "error": "A kamera nem válaszolt időben"})
-    except Exception as e:
-        return JsonResponse({"saved": False, "error": str(e)})
+    return filepath
 
+# --- VIEWS ---
 
-# ---------------------------------------------------------------------------
-# Fotó készítése függvényből
-# ---------------------------------------------------------------------------
-def take_photo_view(request):
-    if request.method != "POST":
-        return JsonResponse({"success": False, "message": "Csak POST kérés engedélyezett"}, status=405)
-    try:
-        filepath = take_photo(str(PHOTO_DIR))
-        return JsonResponse({"success": True, "file": filepath})
-    except Exception as e:
-        return JsonResponse({"success": False, "message": str(e)})
+def email_view(request):
+    return render(request, "email.html")
 
+def selfie_view(request):
+    email = request.GET.get('email', '')
+    if not email:
+        return HttpResponse("""
+            <html><body style="text-align:center;padding:50px;">
+            <h1>⚠️ Nincs email cím!</h1>
+            <p>Kérjük, add meg az email címet.</p>
+            <a href="/">⬅️ Vissza</a></body></html>
+        """)
 
-# ---------------------------------------------------------------------------
-# Preview indítása / leállítása
-# ---------------------------------------------------------------------------
+    latest_overlay = UploadedImage.objects.filter(is_active=True).order_by('-upload_date').first()
+    overlay_url = latest_overlay.image.url if latest_overlay else None
+
+    return render(request, 'selfie.html', {
+        'email': email,
+        'overlay_image': latest_overlay,
+        'overlay_url': overlay_url,
+        'has_overlay': latest_overlay is not None
+    })
+
+def raspberry_view(request):
+    email = request.GET.get('email', '')
+    return render(request, 'camera.html', {
+        'email': email,
+        'camera_available': is_camera_available()
+    })
+
 @csrf_exempt
 def raspberry_start_preview(request):
-    if request.method == "POST":
-        subprocess.Popen(['rpicam-hello', '--width', '640', '--height', '480', '--timeout', '30000'])
+    """Preview indítása (csak háttérben)."""
+    if request.method == 'POST':
+        with CAMERA_LOCK:
+            subprocess.Popen([
+                'rpicam-hello',
+                '--width', '640',
+                '--height', '480',
+                '--timeout', '30000'
+            ])
         return JsonResponse({'success': True, 'message': 'Preview elindítva'})
-
 
 @csrf_exempt
 def raspberry_stop_preview(request):
-    if request.method == "POST":
-        subprocess.run(['pkill', 'rpicam-hello'])
+    """Preview leállítása."""
+    if request.method == 'POST':
+        with CAMERA_LOCK:
+            subprocess.run(['pkill', 'rpicam-hello'])
         return JsonResponse({'success': True, 'message': 'Preview leállítva'})
 
-
-# ---------------------------------------------------------------------------
-# Preview kép lekérése base64-ban
-# ---------------------------------------------------------------------------
 @csrf_exempt
 def raspberry_get_preview(request):
+    """Webes preview lekérése Base64 formátumban."""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Csak POST'})
 
     try:
         with CAMERA_LOCK:
-            # Ideiglenes preview kép készítése a ZSL opcióval (gyors és stabil)
             preview_file = PHOTO_DIR / "preview_tmp.jpg"
-
             subprocess.run([
-                'rpicam-still',       # rpicam-jpeg helyett rpicam-still --zsl a stabilitásért
-                '--zsl',              # Zero Shutter Lag
+                'rpicam-still',
+                '--zsl',   # Zero Shutter Lag → gyors preview
                 '-o', str(preview_file),
                 '--width', '320',
                 '--height', '240',
@@ -112,9 +120,9 @@ def raspberry_get_preview(request):
                 '-q', '50'
             ], check=True, timeout=5)
 
-            # Base64 konvertálás
             with open(preview_file, 'rb') as f:
                 jpeg_bytes = f.read()
+
             base64_image = base64.b64encode(jpeg_bytes).decode("utf-8")
 
         return JsonResponse({
@@ -128,85 +136,27 @@ def raspberry_get_preview(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
 
-# ---------------------------------------------------------------------------
-# Raspberry kamera oldal
-# ---------------------------------------------------------------------------
-def raspberry_camera_view(request):
-    email = request.GET.get('email', '')
-
-    if not email:
-        return HttpResponse("""
-            <html>
-            <body style="text-align: center; padding: 50px;">
-                <h1>⚠️ Nincs email cím!</h1>
-                <p>Kérjük, add meg az email címed.</p>
-                <a href="/">⬅️ Vissza az email oldalra</a>
-            </body>
-            </html>
-        """)
-
-    camera = RaspberryCamera()
-    return render(request, "raspberry_camera.html", {
-        'email': email,
-        'camera_available': camera.available
-    })
-
-
-# ---------------------------------------------------------------------------
-# Selfie készítése Raspberry kamerával
-# ---------------------------------------------------------------------------
 @csrf_exempt
 def raspberry_take_photo(request):
-    if request.method != "POST":
+    """Fotó készítése és mentése a szerverre."""
+    if request.method != 'POST':
         return JsonResponse({"success": False, "message": "Csak POST"}, status=405)
 
-    camera = RaspberryCamera()
-    if not camera.available:
-        return JsonResponse({"success": False, "message": f"Raspberry kamera nem elérhető. Kamera típus: {camera.camera_type}"})
+    if not is_camera_available():
+        return JsonResponse({"success": False, "message": "Raspberry kamera nem elérhető"})
 
-    result = camera.capture_photo()  # dict: success/photo_data/camera_type/message
-    return JsonResponse(result)
+    try:
+        filepath = capture_photo_file()
+        return JsonResponse({"success": True, "file": str(filepath)})
+    except Exception as e:
+        return JsonResponse({"success": False, "message": str(e)})
 
-
-# ---------------------------------------------------------------------------
-# Email és selfie oldalak
-# ---------------------------------------------------------------------------
-def email_view(request):
-    return render(request, "email.html")
-
-
-def selfie_view(request):
-    email = request.GET.get('email', '')
-
-    if not email:
-        return HttpResponse("""
-            <html>
-            <body style="text-align: center; padding: 50px;">
-                <h1>⚠️ Nincs email cím!</h1>
-                <p>Kérjük, add meg az email címed az előző oldalon.</p>
-                <a href="/">⬅️ Vissza az email oldalra</a>
-            </body>
-            </html>
-        """)
-
-    latest_overlay = UploadedImage.objects.filter(is_active=True).order_by('-upload_date').first()
-    overlay_url = latest_overlay.image.url if latest_overlay else None
-
-    context = {
-        'email': email,
-        'overlay_image': latest_overlay,
-        'overlay_url': overlay_url,
-        'has_overlay': latest_overlay is not None
-    }
-
-    return render(request, 'selfie.html', context)
-
-
+# --- Overlay lekérdezés ---
 def get_latest_overlay(request):
     try:
         latest_overlay = UploadedImage.objects.filter(is_active=True).order_by('-upload_date').first()
         if not latest_overlay:
-            return JsonResponse({'success': False, 'message': 'Nincsenek aktív háttérképek'})
+            return JsonResponse({'success': False, 'message': 'Nincsenek aktív overlay képek'})
 
         return JsonResponse({
             'success': True,
@@ -221,14 +171,11 @@ def get_latest_overlay(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
 
-
-# ---------------------------------------------------------------------------
-# Selfie email küldés
-# ---------------------------------------------------------------------------
+# --- Email küldés funkció ---
 @csrf_exempt
 def kuldes(request):
     if request.method != 'POST':
-        return JsonResponse({'siker': False, 'uzenet': 'Csak POST kérések'}, status=405)
+        return JsonResponse({'siker': False, 'uzenet': 'Csak POST kérések'})
 
     try:
         data = json.loads(request.body)
@@ -238,7 +185,9 @@ def kuldes(request):
         if not email or not kep_data:
             return JsonResponse({'siker': False, 'uzenet': 'Hiányzó adatok'})
 
+        # PhotoSession létrehozása
         photo_session = PhotoSession.objects.create(user_email=email, photo_taken=True)
+
         latest_overlay = UploadedImage.objects.filter(is_active=True).order_by('-upload_date').first()
         if latest_overlay:
             photo_session.overlay_image = latest_overlay
@@ -250,6 +199,7 @@ def kuldes(request):
 
         siker, uzenet = kuldo_email(email, kep_data)
 
+        # Admin értesítés
         try:
             admin_settings = AdminSettings.load()
             if admin_settings.admin_email:
@@ -266,70 +216,24 @@ def kuldes(request):
             'overlay_used': latest_overlay is not None,
             'overlay_id': latest_overlay.id if latest_overlay else None
         })
-
     except Exception as e:
         return JsonResponse({'siker': False, 'uzenet': str(e)})
 
-
-# ---------------------------------------------------------------------------
-# QR kód generálás és megjelenítés
-# ---------------------------------------------------------------------------
+# --- QR kód és teszt oldal ---
 def generate_qr_code(request):
     base_url = "http://127.0.0.1:8000"
     qr_url = f"{base_url}/"
-    qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
+    qr = qrcode.QRCode(box_size=10, border=4)
     qr.add_data(qr_url)
     qr.make(fit=True)
-
     img = qr.make_image(fill_color="black", back_color="white")
-    buffer = BytesIO()
+    buffer = io.BytesIO()
     img.save(buffer, format="PNG")
     buffer.seek(0)
     return HttpResponse(buffer.getvalue(), content_type="image/png")
 
-
 def qr_display_view(request):
     return render(request, 'qr_display.html')
 
-
-# ---------------------------------------------------------------------------
-# Teszt és admin oldalak
-# ---------------------------------------------------------------------------
 def test_view(request):
     return render(request, "test.html")
-
-
-def admin2_view(request):
-    return render(request, "admin.html")
-
-
-# ---------------------------------------------------------------------------
-# LED Controller (ha van)
-# ---------------------------------------------------------------------------
-led_controller = None
-
-def init_led_controller():
-    global led_controller
-    try:
-        from .raspberry_led_controller import LEDController
-        led_controller = LEDController()
-        print("✅ LED Controller inicializálva")
-        return True
-    except Exception as e:
-        print(f"⚠️ LED Controller nem elérhető: {e}")
-        led_controller = None
-        return False
-
-
-def raspberry_led_test(request):
-    if not led_controller:
-        return JsonResponse({'success': False, 'message': 'LED controller nincs inicializálva'})
-
-    try:
-        def run_led_sequence():
-            led_controller.countdown_sequence(5)
-        thread = threading.Thread(target=run_led_sequence)
-        thread.start()
-        return JsonResponse({'success': True, 'message': 'LED visszaszámlálás indítva (5 másodperc)'})
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': f'Hiba: {str(e)}'})
