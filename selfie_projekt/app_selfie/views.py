@@ -186,43 +186,17 @@ def raspberry_stop_preview(request):
 
 @csrf_exempt
 def raspberry_get_preview(request):
-    print(f"[GET PREVIEW] /raspberry-get-preview/ - {request.method}")
-
     if request.method != 'POST':
-        return JsonResponse({
-            'success': False,
-            'message': 'Csak POST'
-        })
+        return JsonResponse({'success': False, 'message': 'Csak POST'})
 
     try:
-        print("Preview kép készítése...")
+        with CAMERA_LOCK:
+            frame = CAMERA_INSTANCE.capture_array()  # csak kép lekérése
 
-        picam2 = Picamera2()
-
-        # Preview-hoz kisebb felbontás → gyorsabb
-        config = picam2.create_preview_configuration(
-            main={"size": (640, 480)}
-        )
-        picam2.configure(config)
-
-        picam2.start()
-        time.sleep(0.2)
-
-        # Kép beolvasása numpy array-ként
-        frame = picam2.capture_array()
-
-        picam2.stop()
-        picam2.close()
-
-        # Numpy → PIL Image
         image = Image.fromarray(frame)
-
-        # JPEG memóriába
         buffer = io.BytesIO()
         image.save(buffer, format="JPEG", quality=85)
         jpeg_bytes = buffer.getvalue()
-
-        # Base64
         base64_image = base64.b64encode(jpeg_bytes).decode("utf-8")
 
         return JsonResponse({
@@ -232,11 +206,7 @@ def raspberry_get_preview(request):
         })
 
     except Exception as e:
-        print(f"HIBA: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'message': str(e)
-        })
+        return JsonResponse({'success': False, 'message': str(e)})
 
 
 
