@@ -31,24 +31,39 @@ from picamera2 import Picamera2
 
 SAVE_DIR = "/home/pi/photos"
 
-def capture_view(request):
-    save_path = Path(SAVE_DIR)
-    save_path.mkdir(parents=True, exist_ok=True)
 
-    filename = datetime.now().strftime("photo_%Y%m%d_%H%M%S.jpg")
-    fullpath = save_path / filename
 
+
+camera_lock = threading.Lock()
+
+try:
     picam2 = Picamera2()
-    config = picam2.create_still_configuration()
-    picam2.configure(config)
-
+    picam2.configure(picam2.create_still_configuration())
     picam2.start()
-    time.sleep(0.2)
-    picam2.capture_file(str(fullpath))
-    picam2.stop()
-    picam2.close()
+    camera_available = True
+except Exception as e:
+    print("Camera init error:", e)
+    camera_available = False
 
-    return JsonResponse({"saved": True, "file": str(fullpath)})
+
+def capture_view(request):
+    if not camera_available:
+        return JsonResponse(
+            {"saved": False, "error": "Camera not available"},
+            status=500
+        )
+
+    with camera_lock:
+        save_dir = Path("/home/pi/photos")
+        save_dir.mkdir(parents=True, exist_ok=True)
+
+        filename = datetime.now().strftime("photo_%Y%m%d_%H%M%S.jpg")
+        filepath = save_dir / filename
+
+        time.sleep(0.2)
+        picam2.capture_file(str(filepath))
+
+    return JsonResponse({"saved": True, "file": str(filepath)})
 
 
 
