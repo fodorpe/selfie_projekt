@@ -36,7 +36,7 @@ urlpatterns = [
     # path('test/', views.test_view, name='test'),
 
     # Photo save API (ha van külön)
-    path('take-photo/', views.take_photo_view, name='take_photo'),
+    # path('take-photo/', views.take_photo_view, name='take_photo'),
 ]
 
 
