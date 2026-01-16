@@ -184,6 +184,20 @@ def raspberry_stop_preview(request):
         'message': 'Csak POST'
     })
 
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import subprocess
+from pathlib import Path
+from datetime import datetime
+import base64
+import io
+from PIL import Image
+
+PHOTO_DIR = Path("/home/pi/photos")
+PHOTO_DIR.mkdir(parents=True, exist_ok=True)
+
+CAMERA_LOCK = threading.Lock()  # ha párhuzamos hívások lehetnek
+
 @csrf_exempt
 def raspberry_get_preview(request):
     if request.method != 'POST':
@@ -191,13 +205,22 @@ def raspberry_get_preview(request):
 
     try:
         with CAMERA_LOCK:
-            frame = CAMERA_INSTANCE.capture_array()  # csak kép lekérése
+            # ideiglenes preview kép készítése
+            filename = PHOTO_DIR / "preview_tmp.jpg"
+            subprocess.run([
+                'rpicam-jpeg',
+                '-o', str(filename),
+                '--width', '320',
+                '--height', '240',
+                '--nopreview',
+                '--immediate',
+                '-q', '50'
+            ], check=True, timeout=5)
 
-        image = Image.fromarray(frame)
-        buffer = io.BytesIO()
-        image.save(buffer, format="JPEG", quality=85)
-        jpeg_bytes = buffer.getvalue()
-        base64_image = base64.b64encode(jpeg_bytes).decode("utf-8")
+            # base64 konvertálás
+            with open(filename, 'rb') as f:
+                jpeg_bytes = f.read()
+            base64_image = base64.b64encode(jpeg_bytes).decode("utf-8")
 
         return JsonResponse({
             'success': True,
@@ -205,8 +228,11 @@ def raspberry_get_preview(request):
             'message': 'Valós preview kép'
         })
 
+    except subprocess.TimeoutExpired:
+        return JsonResponse({'success': False, 'message': 'A kamera nem válaszolt időben'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
+
 
 
 
