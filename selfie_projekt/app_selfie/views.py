@@ -23,6 +23,72 @@ from .raspberry_camera import RaspberryCamera
 
 from .raspberry_camera import check_camera, take_photo
 
+from pathlib import Path
+from datetime import datetime
+import time
+from picamera2 import Picamera2
+
+
+SAVE_DIR = "/home/pi/photos"
+
+def capture_view(request):
+    save_path = Path(SAVE_DIR)
+    save_path.mkdir(parents=True, exist_ok=True)
+
+    filename = datetime.now().strftime("photo_%Y%m%d_%H%M%S.jpg")
+    fullpath = save_path / filename
+
+    picam2 = Picamera2()
+    config = picam2.create_still_configuration()
+    picam2.configure(config)
+
+    picam2.start()
+    time.sleep(0.2)
+    picam2.capture_file(str(fullpath))
+    picam2.stop()
+    picam2.close()
+
+    return JsonResponse({"saved": True, "file": str(fullpath)})
+
+
+
+
+
+
+
+
+
+def take_photo(save_dir: str) -> str:
+    save_path = Path(save_dir)
+    save_path.mkdir(parents=True, exist_ok=True)
+
+    filename = datetime.now().strftime("photo_%Y%m%d_%H%M%S.jpg")
+    fullpath = save_path / filename
+
+    picam2 = Picamera2()
+
+    # Egyszerű still config (a kamera a legnagyobb támogatott felbontást is tudja,
+    # de itt lehet explicit beállítani)
+    config = picam2.create_still_configuration()
+    picam2.configure(config)
+
+    picam2.start()
+    time.sleep(0.2)  # rövid "warm-up", hogy stabil legyen az expo/awb
+    picam2.capture_file(str(fullpath))
+    picam2.stop()
+    picam2.close()
+
+    return str(fullpath)
+
+if __name__ == "__main__":
+    print(take_photo("/home/pi/photos"))
+
+
+
+
+
+
+
 
 
 
