@@ -23,7 +23,7 @@ urlpatterns = [
     path('raspberry-take-photo/', views.raspberry_take_photo, name='raspberry_take_photo'),
 
     # Fotók mentése / küldése emailben
-    path('kuldes/', views.kuldes, name='kuldes'),
+    # path('kuldes/', views.kuldes, name='kuldes'),
     path('email-kuldes/', views.email_kuldes, name='email_kuldes'),
 
     # Overlay / QR
