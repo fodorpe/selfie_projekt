@@ -24,7 +24,7 @@ urlpatterns = [
 
     # Fotók mentése / küldése emailben
     # path('kuldes/', views.kuldes, name='kuldes'),
-    path('email-kuldes/', views.email_kuldes, name='email_kuldes'),
+    # path('email-kuldes/', views.email_kuldes, name='email_kuldes'),
 
     # Overlay / QR
     path('get-latest-overlay/', views.get_latest_overlay, name='get_latest_overlay'),
