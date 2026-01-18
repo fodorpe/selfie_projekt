@@ -21,9 +21,14 @@ CAMERA_LOCK = threading.Lock()  # Garantálja, hogy egyszerre csak egy hívás h
 
 # --- HELYI FUNKCIÓK ---
 def is_camera_available() -> bool:
-    """Ellenőrizzük, hogy elérhető-e a kamera."""
     try:
-        subprocess.run(["rpicam-still", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(
+            ["rpicam-still", "--list-cameras"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=3
+        )
         return True
     except Exception:
         return False
@@ -73,10 +78,10 @@ def selfie_view(request):
     })
 
 def raspberry_view(request):
-    email = request.GET.get('email', '')
-    return render(request, 'camera.html', {
-        'email': email,
-        'camera_available': is_camera_available()
+    email = request.GET.get("email", "")
+    return render(request, "camera.html", {
+        "email": email,
+        "camera_available": is_camera_available()
     })
 
 @csrf_exempt
@@ -102,54 +107,78 @@ def raspberry_stop_preview(request):
 
 @csrf_exempt
 def raspberry_get_preview(request):
-    """Webes preview lekérése Base64 formátumban."""
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'message': 'Csak POST'})
+    if request.method != "POST":
+        return JsonResponse({"success": False})
 
     try:
         with CAMERA_LOCK:
-            preview_file = PHOTO_DIR / "preview_tmp.jpg"
+            preview_file = PHOTO_DIR / "preview.jpg"
+
             subprocess.run([
-                'rpicam-still',
-                '--zsl',   # Zero Shutter Lag → gyors preview
-                '-o', str(preview_file),
-                '--width', '320',
-                '--height', '240',
-                '--nopreview',
-                '--immediate',
-                '-q', '50'
+                "rpicam-still",
+                "-o", str(preview_file),
+                "--width", "320",
+                "--height", "240",
+                "--nopreview",
+                "--immediate",
+                "-q", "50"
             ], check=True, timeout=5)
 
-            with open(preview_file, 'rb') as f:
-                jpeg_bytes = f.read()
+            with open(preview_file, "rb") as f:
+                jpeg = f.read()
 
-            base64_image = base64.b64encode(jpeg_bytes).decode("utf-8")
+        b64 = base64.b64encode(jpeg).decode("utf-8")
 
         return JsonResponse({
-            'success': True,
-            'photo_data': f"data:image/jpeg;base64,{base64_image}",
-            'message': 'Valós preview kép'
+            "success": True,
+            "photo_data": f"data:image/jpeg;base64,{b64}"
         })
 
-    except subprocess.TimeoutExpired:
-        return JsonResponse({'success': False, 'message': 'A kamera nem válaszolt időben'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)})
+        return JsonResponse({
+            "success": False,
+            "message": str(e)
+        })
+
+
+
+
 
 @csrf_exempt
 def raspberry_take_photo(request):
-    """Fotó készítése és mentése a szerverre."""
-    if request.method != 'POST':
-        return JsonResponse({"success": False, "message": "Csak POST"}, status=405)
-
-    if not is_camera_available():
-        return JsonResponse({"success": False, "message": "Raspberry kamera nem elérhető"})
+    if request.method != "POST":
+        return JsonResponse({"success": False})
 
     try:
-        filepath = capture_photo_file()
-        return JsonResponse({"success": True, "file": str(filepath)})
+        with CAMERA_LOCK:
+            filename = datetime.now().strftime("photo_%Y%m%d_%H%M%S.jpg")
+            filepath = PHOTO_DIR / filename
+
+            subprocess.run([
+                "rpicam-still",
+                "-o", str(filepath),
+                "--width", "640",
+                "--height", "480",
+                "--nopreview",
+                "--immediate",
+                "-q", "95"
+            ], check=True, timeout=6)
+
+            with open(filepath, "rb") as f:
+                jpeg = f.read()
+
+        b64 = base64.b64encode(jpeg).decode("utf-8")
+
+        return JsonResponse({
+            "success": True,
+            "photo_data": f"data:image/jpeg;base64,{b64}"
+        })
+
     except Exception as e:
-        return JsonResponse({"success": False, "message": str(e)})
+        return JsonResponse({
+            "success": False,
+            "message": str(e)
+        })
 
 # --- Overlay lekérdezés ---
 def get_latest_overlay(request):
