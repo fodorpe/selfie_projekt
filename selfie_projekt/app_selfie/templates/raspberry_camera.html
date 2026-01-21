@@ -364,622 +364,165 @@
 
 
 
-
-
-
-
-
-
-
-
-
-        // VÁLTOZÓK
+        // --- ÁLLAPOT ---
         let currentPhotoData = null;
-        let raspberryCameraActive = false;
-        let previewInterval = null;
-        
-        // RASPBERRY PI KAMERA FUNKCIÓK - EGYETLEN toggleRaspberryCamera()
+        let cameraReady = false;
+
+        // --- "KAMERA BEKAPCSOLÁSA" = CSAK UI ---
         function toggleRaspberryCamera() {
             const toggleBtn = document.getElementById('toggleCameraBtn');
             const takePhotoBtn = document.getElementById('takePhotoBtn');
             const previewDiv = document.getElementById('raspberryPreview');
-            
-            if (!raspberryCameraActive) {
-                // Raspberry kamera bekapcsolása ÉLŐ PREVIEW-VAL
-                toggleBtn.textContent = "⏹️ Kamera kikapcsolása";
-                toggleBtn.style.backgroundColor = "#f44336";
-                toggleBtn.disabled = true; // Letiltjuk amíg inicializál
-                
-                // "Kamera indítása" üzenet
-                previewDiv.innerHTML = `
-                    <div style="text-align: center; color: #ff9800; padding: 40px;">
-                        <div style="font-size: 48px;">⏳</div>
-                        <div style="font-weight: bold; margin: 15px 0;">Raspberry Pi Camera V2 indítása...</div>
-                        <div style="font-size: 14px; color: #aaa;">
-                            Kérlek várj, a kamera inicializálódik
-                        </div>
-                    </div>
-                `;
-                previewDiv.className = "";
-                
-                // API hívás a preview indításához
-                fetch('/raspberry-start-preview/', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'}
-                })
-                .then(response => response.json())
-                .then(data => {
-                    toggleBtn.disabled = false;
-                    
-                    if (data.success) {
-                        // Preview aktiválva
-                        raspberryCameraActive = true;
-                        
-                        // Élő preview szimulálása (képek frissítése)
-                        startLivePreview();
-                        
-                        // Képkészítés gomb engedélyezése
-                        takePhotoBtn.disabled = false;
-                        
-                        console.log("✅ Raspberry Pi élő preview aktiválva");
-                        
-                    } else {
-                        // Hiba
-                        previewDiv.innerHTML = `
-                            <div style="text-align: center; color: #f44336; padding: 40px;">
-                                <div style="font-size: 48px;">❌</div>
-                                <div style="font-weight: bold; margin: 15px 0;">Kamera hiba</div>
-                                <div style="font-size: 14px; color: #aaa;">
-                                    ${data.message || 'Nem sikerült elindítani a kamerát'}
-                                </div>
-                                <button onclick="toggleRaspberryCamera()" style="margin-top: 15px; padding: 8px 15px;">
-                                    Újra próbálom
-                                </button>
-                            </div>
-                        `;
-                        previewDiv.className = "preview-error";
-                        toggleBtn.textContent = "📷 Kamera bekapcsolása";
-                        toggleBtn.style.backgroundColor = "#ff9800";
-                    }
-                })
-                .catch(error => {
-                    toggleBtn.disabled = false;
-                    previewDiv.innerHTML = `
-                        <div style="text-align: center; color: #f44336; padding: 40px;">
-                            <div style="font-size: 48px;">🌐</div>
-                            <div style="font-weight: bold; margin: 15px 0;">Hálózati hiba</div>
-                            <div style="font-size: 12px; color: #aaa;">
-                                Nem sikerült kapcsolódni a szerverhez
-                            </div>
-                        </div>
-                    `;
-                    toggleBtn.textContent = "📷 Kamera bekapcsolása";
-                    toggleBtn.style.backgroundColor = "#ff9800";
-                });
-                
-            } else {
-                // Raspberry kamera kikapcsolása
-                stopLivePreview();
-                
-                // API hívás a preview leállításához
-                fetch('/raspberry-stop-preview/', {
-                    method: 'POST'
-                });
-                
-                toggleBtn.textContent = "📷 Kamera bekapcsolása";
-                toggleBtn.style.backgroundColor = "#ff9800";
-                previewDiv.innerHTML = `<div style="padding: 40px; text-align: center; color: #666;">
-                    Kattints a "Kamera bekapcsolása" gombra
-                </div>`;
-                previewDiv.className = "";
-                takePhotoBtn.disabled = true;
-                raspberryCameraActive = false;
-                
-                console.log("✅ Raspberry Pi preview leállítva");
-            }
-        }
-        
-        function startLivePreview() {
-            const previewDiv = document.getElementById('raspberryPreview');
-            
-            // Preview aktív stílus
-            previewDiv.className = "preview-active";
-            
-            // Frissítő funkció - 2 másodpercenként új képet kér
-            previewInterval = setInterval(() => {
-                updatePreviewImage();
-            }, 2000); // 2 másodpercenként frissít
-            
-            // Azonnali első frissítés
-            updatePreviewImage();
-        }
-        
-        function stopLivePreview() {
-            if (previewInterval) {
-                clearInterval(previewInterval);
-                previewInterval = null;
-            }
-        }
-        
-        function updatePreviewImage() {
-            const previewDiv = document.getElementById('raspberryPreview');
-            
-            // API hívás egy gyors preview képért
-            fetch('/raspberry-get-preview/', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'}
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Frissítjük a preview-t az új képpel
-                    previewDiv.innerHTML = `
-                        <img src="${data.photo_data}" alt="Élő Preview" 
-                             style="max-width: 100%; max-height: 100%;">
-                        <div class="preview-indicator">● ÉLŐ</div>
-                        <div style="position: absolute; bottom: 10px; left: 10px; 
-                                   background: rgba(0,0,0,0.7); color: white; 
-                                   padding: 5px; border-radius: 3px; font-size: 11px;">
-                            🍓 Raspberry Pi V2
-                        </div>
-                    `;
-                } else {
-                    // Hiba esetén üzenet
-                    previewDiv.innerHTML = `
-                        <div style="text-align: center; color: #ff9800; padding: 30px;">
-                            <div style="font-size: 36px;">📡</div>
-                            <div>Preview frissítés...</div>
-                        </div>
-                        <div class="preview-indicator">● ÉLŐ</div>
-                    `;
-                }
-            })
-            .catch(error => {
-                // Csak logoljuk a hibát, ne töröljük a preview-t
-                console.log("Preview frissítés hiba:", error);
-            });
-        }
-        
-        function startCountdown() {
-            if (!raspberryCameraActive) {
-                alert("Először kapcsold be a Raspberry Pi kamerát!");
-                return;
-            }
-            
-            let count = 3; // Csak 3 másodperc
-            const countdownElement = document.getElementById('countdown');
-            const takePhotoBtn = document.getElementById('takePhotoBtn');
-            const sendPhotoBtn = document.getElementById('sendPhotoBtn');
-            const previewDiv = document.getElementById('raspberryPreview');
-            
-            // Visszaszámlálás indítása
-            takePhotoBtn.disabled = true;
-            sendPhotoBtn.disabled = true;
-            countdownElement.textContent = count;
-            countdownElement.style.fontSize = "48px";
-            countdownElement.style.color = "#ff9800";
-            
-            // Preview frissítése visszaszámlálással
+
+            cameraReady = true;
+
+            toggleBtn.textContent = "✅ Kamera kész";
+            toggleBtn.disabled = true;
+            toggleBtn.style.backgroundColor = "#4caf50";
+
             previewDiv.innerHTML = `
-                <div style="text-align: center; background: rgba(0,0,0,0.8); 
-                           color: white; height: 100%; display: flex; 
-                           flex-direction: column; justify-content: center;">
-                    <div style="font-size: 100px; font-weight: bold;">${count}</div>
-                    <div style="margin-top: 20px; font-size: 20px;">Készülj a képre!</div>
+                <div style="padding:40px;text-align:center;color:#4caf50;">
+                    <div style="font-size:48px;">📷</div>
+                    <div>Kamera készen áll</div>
                 </div>
             `;
-            
-            const timer = setInterval(function() {
+
+            takePhotoBtn.disabled = false;
+        }
+
+        // --- VISSZASZÁMLÁLÁS (UI ONLY) ---
+        function startCountdown() {
+            if (!cameraReady) {
+                alert("Előbb kapcsold be a kamerát!");
+                return;
+            }
+
+            const countdown = document.getElementById('countdown');
+            const takePhotoBtn = document.getElementById('takePhotoBtn');
+            let count = 3;
+
+            takePhotoBtn.disabled = true;
+            countdown.style.fontSize = "48px";
+            countdown.textContent = count;
+
+            const timer = setInterval(() => {
                 count--;
-                countdownElement.textContent = count;
-                
-                // Preview frissítése
-                if (count > 0) {
-                    previewDiv.innerHTML = `
-                        <div style="text-align: center; background: rgba(0,0,0,0.8); 
-                                   color: white; height: 100%; display: flex; 
-                                   flex-direction: column; justify-content: center;">
-                            <div style="font-size: 100px; font-weight: bold;">${count}</div>
-                            <div style="margin-top: 20px; font-size: 20px;">Készülj a képre!</div>
-                        </div>
-                    `;
-                }
-                
+                countdown.textContent = count > 0 ? count : "📸";
+
                 if (count <= 0) {
                     clearInterval(timer);
-                    countdownElement.textContent = "📸";
-                    countdownElement.style.fontSize = "24px";
-                    
-                    // Raspberry Pi kamerával kép készítése
+                    countdown.textContent = "";
                     takeRaspberryPicture();
-                    takePhotoBtn.disabled = false;
                 }
             }, 1000);
         }
-        
+
+        // --- KÉPKÉSZÍTÉS (AZ EGYETLEN KAMERA-HÍVÁS) ---
         function takeRaspberryPicture() {
-            console.log("=== RASPBERRY PI KÉPKÉSZÍTÉS ===");
-            
             const previewDiv = document.getElementById('raspberryPreview');
             const sendPhotoBtn = document.getElementById('sendPhotoBtn');
-            
-            // "Készül..." üzenet
+
             previewDiv.innerHTML = `
-                <div style="text-align: center; background: rgba(0,0,0,0.8); 
-                           color: white; height: 100%; display: flex; 
-                           flex-direction: column; justify-content: center;">
-                    <div style="font-size: 60px;">⏳</div>
-                    <div style="margin-top: 20px; font-size: 20px;">Kép készítése...</div>
+                <div style="padding:40px;text-align:center;color:white;background:#000;">
+                    <div style="font-size:48px;">⏳</div>
+                    <div>Kép készítése...</div>
                 </div>
             `;
-            
-            // Raspberry Pi kamera API hívása
-            fetch('/raspberry-take-photo/', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'}
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log("Raspberry kamera válasz:", data);
-                
-                if (data.success) {
-                    // Kép megjelenítése
-                    previewDiv.innerHTML = `
-                        <img src="${data.photo_data}" alt="Raspberry Pi Kép" 
-                             style="max-width: 100%; max-height: 100%;">
-                        <div style="position: absolute; bottom: 10px; right: 10px; 
-                                   background: rgba(0,0,0,0.7); color: white; 
-                                   padding: 5px; border-radius: 3px; font-size: 12px;">
-                            📸 Kész!
-                        </div>
-                    `;
-                    
-                    // Tényleges képfeldolgozás
-                    processRaspberryPhoto(data.photo_data);
-                    
-                    // Képküldés gomb engedélyezése
-                    sendPhotoBtn.disabled = false;
-                    sendPhotoBtn.textContent = "📤 Kép küldése";
-                    
-                    console.log("✅ Raspberry Pi kép sikeresen készült");
-                    
-                } else {
-                    // Hiba
-                    previewDiv.innerHTML = `
-                        <div style="text-align: center; color: #ff6b6b; padding: 40px;">
-                            <div style="font-size: 48px;">❌</div>
-                            <div style="margin-top: 15px;">Hiba: ${data.message}</div>
-                            <button onclick="takeRaspberryPicture()" 
-                                    style="margin-top: 15px; padding: 8px 15px;">
-                                Újra próbálom
-                            </button>
-                        </div>
-                    `;
-                    
-                    alert("❌ Hiba: " + data.message);
-                    document.getElementById('takePhotoBtn').disabled = false;
-                }
-            })
-            .catch(error => {
-                previewDiv.innerHTML = `
-                    <div style="text-align: center; color: #ff6b6b; padding: 40px;">
-                        <div style="font-size: 48px;">🌐</div>
-                        <div style="margin-top: 15px;">Hálózati hiba</div>
-                    </div>
-                `;
-                alert("❌ Hálózati hiba");
-                document.getElementById('takePhotoBtn').disabled = false;
-            });
-        }
-        
-        function processRaspberryPhoto(photoData) {
-            // Képfeldolgozás (canvas-re rajzolás)
-            const canvas = document.getElementById('canvas');
-            const img = new Image();
-            
-            img.onload = function() {
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
-                
-                // Overlay kombinálása
-                setTimeout(() => {
-                    combineImages();
-                }, 500);
-            };
-            img.src = photoData;
-        }
-        
-        function sendPhoto() {
-            const gomb = document.getElementById('sendPhotoBtn');
-            const email = "{{ email }}";
 
-            if (!currentPhotoData) {
-                alert("Nincs kép!");
-                return;
-            }
-
-            // Gomb letilt
-            gomb.disabled = true;
-            gomb.textContent = "Küldés...";
-
-            // Küldés a szervernek
-            fetch('/kuldes/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    email: email,
-                    kep: currentPhotoData,
-                    camera_type: 'raspberry_pi_v2',
-                    timestamp: new Date().toISOString()
-                })
-            })
-            .then(v => v.json())
-            .then(eredmeny => {
-                if (eredmeny.siker) {
-                    gomb.textContent = "✅ Elküldve (Raspberry Pi)";
-                    gomb.className = "sent";
-                    alert("✅ Raspberry Pi kép elküldve!");
-                    
-                    // 5 másodperc után visszaállítás
-                    setTimeout(() => {
-                        gomb.textContent = "📤 Kép küldése (Raspberry Pi)";
-                        gomb.disabled = false;
-                        gomb.className = "";
-                    }, 5000);
-                    
-                } else {
-                    gomb.textContent = "📤 Kép küldése (Raspberry Pi)";
-                    gomb.disabled = false;
-                    alert("❌ Hiba: " + eredmeny.uzenet);
-                }
-            })
-            .catch(hiba => {
-                gomb.textContent = "📤 Kép küldése (Raspberry Pi)";
-                gomb.disabled = false;
-                alert("❌ Hálózati hiba");
-            });
-        }
-        
-        // Overlay kép betöltése oldal betöltésekor
-        document.addEventListener('DOMContentLoaded', function() {
-            loadOverlay();
-        });
-
-        function loadOverlay() {
-            const overlayContainer = document.getElementById('overlayContainer');
-            const overlayImage = document.getElementById('overlayImage');
-            const overlayPlaceholder = document.getElementById('overlayPlaceholder');
-            
-            // 1. Django template-ből származó adat
-            const djangoOverlayUrl = "{{ overlay_url|safe }}";
-            
-            if (djangoOverlayUrl && djangoOverlayUrl !== 'None') {
-                // Ha van Django adat, használjuk
-                overlayImage.src = djangoOverlayUrl;
-                overlayImage.style.display = 'block';
-                if (overlayPlaceholder) overlayPlaceholder.style.display = 'none';
-                console.log("Overlay betöltve Django template-ből:", djangoOverlayUrl);
-                return;
-            }
-            
-            // 2. Ha nincs Django adat, fetcheljük
-            if (overlayPlaceholder) {
-                overlayPlaceholder.innerHTML = "Háttérkép betöltése...";
-            }
-            
-            fetch('/get-latest-overlay/')
-                .then(response => response.json())
+            fetch('/raspberry-take-photo/', { method: 'POST' })
+                .then(r => r.json())
                 .then(data => {
-                    if (data.success && data.overlay && data.overlay.url) {
-                        overlayImage.src = data.overlay.url;
-                        overlayImage.style.display = 'block';
-                        if (overlayPlaceholder) overlayPlaceholder.style.display = 'none';
-                        
-                        // Információ megjelenítése
-                        const infoDiv = document.createElement('div');
-                        infoDiv.innerHTML = `
-                            <div style="text-align: center; margin-top: 10px; font-size: 12px; color: #555;">
-                                <strong>${data.overlay.description || 'Nincs leírás'}</strong><br>
-                                <small>Feltöltve: ${data.overlay.upload_date}</small>
-                            </div>
-                        `;
-                        
-                        // Régi info törlése
-                        const oldInfo = overlayContainer.querySelector('.overlay-info');
-                        if (oldInfo) oldInfo.remove();
-                        
-                        infoDiv.className = 'overlay-info';
-                        overlayContainer.appendChild(infoDiv);
-                        
-                        console.log("Overlay betöltve API-ból:", data.overlay.url);
-                    } else {
-                        if (overlayPlaceholder) {
-                            overlayPlaceholder.innerHTML = `
-                                <div style="color: #f44336; padding: 20px; text-align: center;">
-                                    ❌ ${data.message || 'Nincs aktív háttérkép'}<br>
-                                    <small>Az admin oldalon lehet háttérképeket feltölteni.</small>
-                                </div>
-                            `;
-                        }
+                    if (!data.success) {
+                        throw new Error(data.message);
                     }
+
+                    // A backend FILE-t ad vissza → újra betöltjük base64-be
+                    fetch(data.file)
+                        .then(r => r.blob())
+                        .then(blob => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                                currentPhotoData = reader.result;
+
+                                previewDiv.innerHTML = `
+                                    <img src="${currentPhotoData}" style="max-width:100%;">
+                                    <div style="margin-top:10px;color:#4caf50;">📸 Kész!</div>
+                                `;
+
+                                processRaspberryPhoto(currentPhotoData);
+                                sendPhotoBtn.disabled = false;
+                            };
+                            reader.readAsDataURL(blob);
+                        });
                 })
-                .catch(error => {
-                    console.error("Hiba a háttérkép betöltésénél:", error);
-                    if (overlayPlaceholder) {
-                        overlayPlaceholder.innerHTML = `
-                            <div style="color: #f44336; padding: 20px; text-align: center;">
-                                ❌ Hálózati hiba<br>
-                                <small>Nem sikerült betölteni a háttérképet.</small>
-                            </div>
-                        `;
-                    }
+                .catch(err => {
+                    previewDiv.innerHTML = `
+                        <div style="padding:40px;text-align:center;color:#f44336;">
+                            ❌ ${err.message}
+                        </div>
+                    `;
+                    document.getElementById('takePhotoBtn').disabled = false;
                 });
         }
 
-        function combineImages() {
-            console.log("=== RASPBERRY COMBINE IMAGES START ===");
-            
+        // --- KÉP CANVAS-RA ---
+        function processRaspberryPhoto(photoData) {
             const canvas = document.getElementById('canvas');
-            const overlayImg = document.getElementById('overlayImage');
-            const finalCanvas = document.getElementById('finalCanvas');
-            const finalSection = document.querySelector('.final-section');
-            
-            if (!canvas) {
-                console.log("❌ Canvas nem található");
-                return;
-            }
-            
-            console.log("Canvas mérete:", canvas.width, "x", canvas.height);
-            console.log("Overlay kép:", overlayImg ? "találva" : "nem találva");
-            
-            if (overlayImg) {
-                console.log("Overlay src:", overlayImg.src);
-                console.log("Overlay complete:", overlayImg.complete);
-                console.log("Overlay natural size:", overlayImg.naturalWidth, "x", overlayImg.naturalHeight);
-            }
-            
-            // Végeredmény canvas mérete - EGYÉNI MÉRET
-            finalCanvas.width = 640;  // Fix szélesség
-            finalCanvas.height = 480; // Fix magasság
-            const ctx = finalCanvas.getContext('2d');
-            
-            // 1. Először töröljük a canvas-t
-            ctx.clearRect(0, 0, finalCanvas.width, finalCanvas.height);
-            
-            // 2. Háttérkép (overlay) - HA VAN
-            if (overlayImg && overlayImg.src && overlayImg.complete && overlayImg.naturalWidth > 0) {
-                console.log("📷 Háttérkép rajzolása...");
-                
-                // Háttérkép méretezése hogy kitöltse a canvas-t
-                ctx.drawImage(
-                    overlayImg, 
-                    0, 0,                     // forrás pozíció
-                    overlayImg.naturalWidth,  // forrás szélesség
-                    overlayImg.naturalHeight, // forrás magasság
-                    0, 0,                     // cél pozíció
-                    finalCanvas.width,        // cél szélesség
-                    finalCanvas.height        // cél magasság
-                );
-                
-                console.log("✅ Háttérkép rajzolva");
-            } else {
-                console.log("⚠️ Nincs háttérkép vagy nem töltődött be");
-                // Raspberry Pi színű háttér
-                ctx.fillStyle = '#C51A4A'; // Raspberry Pi vörös
-                ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-                
-                // Raspberry Pi logó jelzés
-                ctx.fillStyle = '#ffffff';
-                ctx.font = '20px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('Raspberry Pi Camera V2', finalCanvas.width / 2, finalCanvas.height / 2);
-            }
-            
-            // 3. Raspberry Pi selfie rárajzolása (középre igazítva)
-            console.log("📸 Raspberry Pi selfie rajzolása...");
-            
-            // Selfie méretezése a canvas-re
-            const selfieWidth = finalCanvas.width * 0.8;  // 80%-a a canvas méretének
-            const selfieHeight = finalCanvas.height * 0.8;
-            const selfieX = (finalCanvas.width - selfieWidth) / 2;  // Középre igazítás
-            const selfieY = (finalCanvas.height - selfieHeight) / 2;
-            
-            ctx.drawImage(
-                canvas,
-                0, 0,                    // forrás pozíció
-                canvas.width,            // forrás szélesség
-                canvas.height,           // forrás magasság
-                selfieX, selfieY,        // cél pozíció
-                selfieWidth,             // cél szélesség
-                selfieHeight             // cél magasság
-            );
-            
-            // 4. Raspberry Pi stílusú keret rajzolása
-            ctx.strokeStyle = '#C51A4A'; // Raspberry Pi vörös
-            ctx.lineWidth = 5;
-            ctx.strokeRect(selfieX, selfieY, selfieWidth, selfieHeight);
-            
-            // 5. "Raspberry Pi Camera V2" felirat
-            ctx.fillStyle = '#C51A4A';
-            ctx.font = 'bold 16px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('Raspberry Pi Camera V2', finalCanvas.width / 2, 30);
-            
-            console.log("✅ Raspberry Pi selfie rajzolva");
-            console.log("Selfie pozíció:", selfieX, selfieY);
-            console.log("Selfie mérete:", selfieWidth, "x", selfieHeight);
-            
-            // Végeredmény megjelenítése
-            finalSection.style.display = 'block';
-            
-            // Base64 kép a küldéshez
-            currentPhotoData = finalCanvas.toDataURL('image/jpeg', 0.9);
-            
-            console.log("✅ Raspberry Pi végeredmény kész!");
-            console.log("=== RASPBERRY COMBINE IMAGES END ===\n");
+            const img = new Image();
+
+            img.onload = () => {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                canvas.getContext('2d').drawImage(img, 0, 0);
+                setTimeout(combineImages, 300);
+            };
+
+            img.src = photoData;
         }
 
-        // Végeredmény mentése
-        function saveFinalImage() {
-            if (!currentPhotoData) {
-                alert("Nincs kép!");
-                return;
-            }
-            
-            const finalCanvas = document.getElementById('finalCanvas');
-            const imageData = finalCanvas.toDataURL('image/jpeg', 0.9);
-            
-            // Mentés link létrehozása
-            const link = document.createElement('a');
-            link.download = 'raspberry_pi_selfie.jpg';
-            link.href = imageData;
-            link.click();
-            
-            alert("✅ Raspberry Pi kép letöltve!");
-        }
+        // --- KÜLDÉS EMAILBEN ---
+        function sendPhoto() {
+            const btn = document.getElementById('sendPhotoBtn');
+            const email = "{{ email }}";
 
-        // Overlay kép ellenőrzése oldal betöltésekor
-        window.addEventListener('load', function() {
-            const overlayImg = document.getElementById('overlayImage');
-            
-            if (overlayImg) {
-                console.log("🔍 Overlay kép ellenőrzése...");
-                
-                if (overlayImg.src) {
-                    console.log("📁 Overlay fájl:", overlayImg.src.substring(0, 50) + "...");
-                    
-                    // Kép betöltésének ellenőrzése
-                    if (overlayImg.complete && overlayImg.naturalWidth > 0) {
-                        console.log("✅ Overlay már betöltődött");
-                        console.log("📏 Overlay mérete:", overlayImg.naturalWidth, "x", overlayImg.naturalHeight);
-                    } else {
-                        console.log("⏳ Overlay még betöltődik...");
-                        
-                        // Eseményfigyelők
-                        overlayImg.onload = function() {
-                            console.log("✅ Overlay betöltődött!");
-                            console.log("📏 Mérete:", this.naturalWidth, "x", this.naturalHeight);
-                        };
-                        
-                        overlayImg.onerror = function() {
-                            console.log("❌ Hiba az overlay betöltésénél!");
-                        };
-                    }
+            btn.disabled = true;
+            btn.textContent = "Küldés...";
+
+            fetch('/kuldes/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: email,
+                    kep: currentPhotoData
+                })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.siker) {
+                    btn.textContent = "✅ Elküldve";
                 } else {
-                    console.log("⚠️ Overlay-nak nincs src attribútuma");
+                    throw new Error(res.uzenet);
                 }
-            } else {
-                console.log("⚠️ Overlay kép elem nem található");
-            }
-        });
+            })
+            .catch(err => {
+                alert("Hiba: " + err.message);
+                btn.disabled = false;
+                btn.textContent = "📤 Kép küldése";
+            });
+        }
 
-        // Gombok kezdeti állapota
+        // --- INIT ---
         document.getElementById('takePhotoBtn').disabled = true;
         document.getElementById('sendPhotoBtn').disabled = true;
+
+        
+        
+
+
+
+
+
+        
     </script>
 </body>
 </html>
