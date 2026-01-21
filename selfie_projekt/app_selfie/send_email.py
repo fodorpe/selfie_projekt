@@ -33,7 +33,7 @@ def kuldo_email(kinek, kep_data):
         szerver.starttls()
         
         # BEJELENTKEZÉS - IDE ÍRD A JELSZAVAD!
-        szerver.login('selfiebox.proba@gmail.com', 'selfie2000')
+        szerver.login('selfiebox.proba@gmail.com', 'eeie ipep whir yrzj')
         
         # Küldés
         szerver.send_message(uzenet)
