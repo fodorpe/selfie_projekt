@@ -138,16 +138,26 @@ def raspberry_get_preview(request):
 
 @csrf_exempt
 def raspberry_take_photo(request):
-    """Fotó készítése és mentése a szerverre."""
     if request.method != 'POST':
         return JsonResponse({"success": False, "message": "Csak POST"}, status=405)
 
     if not is_camera_available():
-        return JsonResponse({"success": False, "message": "Raspberry kamera nem elérhető"})
+        return JsonResponse({"success": False, "message": "Kamera nem elérhető"})
 
     try:
         filepath = capture_photo_file()
-        return JsonResponse({"success": True, "file": str(filepath)})
+
+        # Fájl → base64
+        with open(filepath, "rb") as f:
+            image_bytes = f.read()
+
+        image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+
+        return JsonResponse({
+            "success": True,
+            "photo_data": f"data:image/jpeg;base64,{image_base64}"
+        })
+
     except Exception as e:
         return JsonResponse({"success": False, "message": str(e)})
 

@@ -421,6 +421,7 @@
         function takeRaspberryPicture() {
             const previewDiv = document.getElementById('raspberryPreview');
             const sendPhotoBtn = document.getElementById('sendPhotoBtn');
+            const takePhotoBtn = document.getElementById('takePhotoBtn');
 
             previewDiv.innerHTML = `
                 <div style="padding:40px;text-align:center;color:white;background:#000;">
@@ -429,41 +430,40 @@
                 </div>
             `;
 
-            fetch('/raspberry-take-photo/', { method: 'POST' })
-                .then(r => r.json())
-                .then(data => {
-                    if (!data.success) {
-                        throw new Error(data.message);
-                    }
+            takePhotoBtn.disabled = true;
+            sendPhotoBtn.disabled = true;
 
-                    // A backend FILE-t ad vissza → újra betöltjük base64-be
-                    fetch(data.file)
-                        .then(r => r.blob())
-                        .then(blob => {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                                currentPhotoData = reader.result;
+            fetch('/raspberry-take-photo/', {
+                method: 'POST'
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.message || 'Ismeretlen hiba');
+                }
 
-                                previewDiv.innerHTML = `
-                                    <img src="${currentPhotoData}" style="max-width:100%;">
-                                    <div style="margin-top:10px;color:#4caf50;">📸 Kész!</div>
-                                `;
+                // ✅ A KÉP MÁR BASE64
+                currentPhotoData = data.photo_data;
 
-                                processRaspberryPhoto(currentPhotoData);
-                                sendPhotoBtn.disabled = false;
-                            };
-                            reader.readAsDataURL(blob);
-                        });
-                })
-                .catch(err => {
-                    previewDiv.innerHTML = `
-                        <div style="padding:40px;text-align:center;color:#f44336;">
-                            ❌ ${err.message}
-                        </div>
-                    `;
-                    document.getElementById('takePhotoBtn').disabled = false;
-                });
+                previewDiv.innerHTML = `
+                    <img src="${currentPhotoData}" style="max-width:100%; max-height:100%;">
+                    <div style="margin-top:10px;color:#4caf50;">📸 Kész!</div>
+                `;
+
+                processRaspberryPhoto(currentPhotoData);
+                sendPhotoBtn.disabled = false;
+                takePhotoBtn.disabled = false;
+            })
+            .catch(err => {
+                previewDiv.innerHTML = `
+                    <div style="padding:40px;text-align:center;color:#f44336;">
+                        ❌ ${err.message}
+                    </div>
+                `;
+                takePhotoBtn.disabled = false;
+            });
         }
+
 
         // --- KÉP CANVAS-RA ---
         function processRaspberryPhoto(photoData) {
