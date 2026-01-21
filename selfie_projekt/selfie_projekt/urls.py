@@ -14,6 +14,7 @@ urlpatterns = [
     # Selfie / email
     path('', views.email_view, name='email'),
     path('selfie/', views.selfie_view, name='selfie'),
+    path('admin/', admin.site.urls),
 
     # Raspberry Pi kamera
     path('raspberry/', views.raspberry_view, name='raspberry'),
@@ -23,7 +24,7 @@ urlpatterns = [
     path('raspberry-take-photo/', views.raspberry_take_photo, name='raspberry_take_photo'),
 
     # Fotók mentése / küldése emailben
-    # path('kuldes/', views.kuldes, name='kuldes'),
+    path('kuldes/', views.kuldes, name='kuldes'),
     # path('email-kuldes/', views.email_kuldes, name='email_kuldes'),
 
     # Overlay / QR
